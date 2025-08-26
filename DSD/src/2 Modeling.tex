@@ -1,0 +1,126 @@
+\chapter{Information Modeling}
+
+This chapter discusses modeling methods and techniques for both operational databases and data warehouses, introducing the main notation elements of the most common models.
+
+\section{Information Modeling}
+
+When a database system is created, it is based on some model that reproduces the essential characteristics of the real world information it is intended to represent. In general, models can be either \textit{iconic}, if they retain physical characteristics of the entities they represent, or \textit{symbolic}, if they use symbols to represent entities and their relationships. In the context of information systems, symbolic models are used.
+\BoxDef{Symbolic Model}{
+    A \textbf{symbolic model} is a subjective, formal representation of ideas and knowledge about some aspects of the real world, called domain of discourse, designed to serve a specific purpose.
+}
+A model simplifies reality by focusing on what is important for the task at hand, and uses a formal language to express this simplified representation.\\
+Modeling in databases is broken down into three levels of abstraction:
+\begin{itemize}
+    \item \textbf{Conceptual level}, in which the basic structure of the database is defined at an high-level, after analyzing the problem and considering any user requirement. Some examples of conceptual models are the \textbf{Entity-Relationship} (\textbf{ER}) model and the \textbf{Object Data Model} (\textbf{ODM});
+    \item \textbf{Logical level}, where the conceptual model is mapped to a more detailed description of the data structures, including all attributes and constraints. The model is still independet from any specific DBMS. An example of logical model is the \textbf{Relational Data Model};
+    \item \textbf{Physical level}, where the physical data structures are defined for the elements in the logical model. The choices done at this level must take in consideration the features of the DBMS used to implement the database.
+\end{itemize}
+
+\subsection{What to Model}
+The reality to be modeled is considered in terms of concrete knowledge, abstract knowledge, procedural knowledge, dynamics, and communications.
+
+\paragraph{Concrete Knowledge} Concrete knowledge refers to specific facts known of the reality to be represented. We can assume reality consists of \textit{entities}, \textit{properties}, and \textit{relationships}.
+\BoxDef{Entity, Property, Relationship}{
+    An \textbf{entity} is anything for which certain facts should be recorded, independently of the existence of other entities.
+
+    A \textbf{property} is a fact about an entity which is not meaningful in itself, but only because it describes an entity of interest.
+
+    A \textbf{relationship} is a fact which correlates independent entities.
+}
+For example, we want to model the administration system of a library. Examples of entities can be a book, a bibliographic description, a registered user, or a loan record. Properties may be a user's name and address, or a book's title and author. Entities with the same properties are said to have the same \textbf{type}, and are classified in the same \textbf{collection}, or \textbf{entity set}. The books titled ``1984'', ``Moby Dick'', and ``The Great Gatsby'' are all part of the same entity set, and are all of type \textit{book}. As for relationships, examples could be the relationship between a bibliographic description and one or more books (the same book may be owned multiple times by the library), or between a user and their loan records.
+
+\paragraph{Abstract Knowledge} Abstract knowledge concerns facts which impose certain restrictions on admissible values of concrete knowledge and on the way these values can evolve over time, or expresses rules on how to derive new information. These rules are called \textbf{integrity constraints}. In the library example, abstract knowledge could include rules about the data type of attributes, such that book properties \textit{title} and \textit{author} must be strings, while \textit{length} must be a non-negative integer; another example may be the rule that a loan can only be borrowed for two weeks at a time, and must be associated with the \textit{id} of a registered user; the age of a user can be automatically calculated by subtracting the \textit{birthdate} from the current date. Relationships can also have constraints that limit the possible correlated entities. The most important ones are \textbf{structural constraints}, which are:
+\begin{itemize}
+    \item \textbf{Cardinality}, \textit{one} or \textit{many}, to specify how many entities of one collection can be associated with entities of another collection, e.g., a bibliographic description can be associated with \textit{many} book copies, while a book copy is associated with only \textit{one} bibliographic description, so the relationship is called \textit{one-to-many};
+    \item \textbf{Participation}, \textit{total} or \textit{partial}, to specify whether an entity of one collection can have entities of another collection associated with it, e.g., a loan record must be associated with one registered user, so the participation from the loan record side is \textit{total}; on the other hand, a registered user may have never loaned a book, so the participation from the registered user side is \textit{partial}. 
+\end{itemize}
+
+\section{Modeling for Operational Databases}
+
+To construct the conceptual model for an operational database, we define a \textbf{schema}, a collection of time-invariant definitions which model the structure of admissible data (including integrity constraints), and procedural knowledge (i.e., the elementary operations applied to concrete knowledge to cause changes). Different formalisms, each with a specific data model, can be used to define the schema.
+\BoxDef{Data Model}{
+    A \textbf{Data Model} is a set of abstraction mechanisms, with associated operators and implicit integrity constraints, used to define a database schema.
+}
+A data model is a symbolic model specific for databases. A type of data model is the \textbf{Object Data Model}. The basic mechanisms of the ODM are:
+\begin{itemize}
+    \item \textbf{Objects}: they are the equivalent of entities. An object is a software entity with an internal state represented by instance variables, and a behaviour described by a set of methods. Each object has its own identity that persists over time, even if its internal state change;
+    \item \textbf{Object types}: just like an entity belongs to a type, an object belongs to an object type. An object type describes the state fields and the implementation of methods common to all objects of that type;
+    \item \textbf{Classes}: a modifiable sequence of objects with the same type. They are the equivalent of entity sets. Each class introduces the definition of a type and a constructor for values of this type, as well as a name to denote the class itself;
+    \item \textbf{Relationships}: classes have relationships with other classes, which are characterized by a cardinality and partiality. A relationship may also have attributes, or be recursive (i.e., a class has a relationship with itself);
+    \item \textbf{Inheritance}: a mechanism that allows something to be defined by only describing how it differs from a previously defined one. It is distinct from subtyping, which is a relation between types such that when one type $A$ is a subtype of another type $B$, then any operation applicable to type $B$ can also applied to type $A$ (although inheritance is one way to define subtypes). A type can be defined from a single supertype (\textit{single inheritance}) or from several supertypes (\textit{multiple inheritance}).
+    \item \textbf{Class hierarchies}: similarly to types, classes can also be organized in hierarchies. If $C_1$ is a subset of $C_2$, then $C_1$ is a \textit{subclass} of $C_2$, and this implies that:
+        \begin{itemize}[noitemsep]
+            \item The type of elements in $C_1$ is a subtype of the type of the elements in $C_2$;
+            \item The elements in $C_1$ are a subset of the elements in $C_2$, and $C_1$ inherits any relationship defined on $C_2$.
+        \end{itemize}
+    When the same superclass is shared by two or more subclasses, two constraint can be defined: \textbf{overlap} and \textbf{covering}. A no overlap constraint specifies that two subclasses cannot share any element. In the absence of this constraint, the same object may belong to more that one subclass. A covering constraint specifies that the objects in the subclasses must collectively include all elements in the superclass. In the absence of this constraing, the superclass may have elements that do not belong to any subclass. When both constraints are present, we call the hierarchy a \textbf{generalization}.
+\end{itemize}
+The following figures illustrate a possible graphical notation used for ODM. There is no standard notation; the one used here is based on the notation used in UML.
+\begin{figure}[ht]
+    \centering
+    \includesvg[width=0.55\textwidth]{img/ODM_objects.svg}
+    \caption{Graphical notation for objects, object types, and classes. Classes can be shown with different levels of detail.}
+\end{figure}
+\begin{figure}[ht]
+    \centering
+    \includesvg[width=0.45\textwidth]{img/ODM_relationships_1.svg}
+    \caption{Simple relationships between classes. Each relationship is represented by an arc with a label. Multivalued relationships are represented with a double arrow. Optional relationships have a crossed line. Recursive relationships require labels on the ends of the arcs to clarify the meaning.}
+\end{figure}
+\begin{figure}[ht]
+    \centering
+    \includesvg[width=0.5\textwidth]{img/ODM_relationships_2.svg}
+    \caption{Relationships with attributes.}
+\end{figure}
+\begin{figure}[ht]
+    \centering
+    \includesvg[width=0.6\textwidth]{img/ODM_hierarchies.svg}
+    \caption{Class hierarchies.}
+\end{figure}
+\clearpage
+
+\section{Modeling for Data Warehouses}
+
+This section will introduce three models to define the structure of a data warehouse: for the conceptual level, the \textbf{Dimensional Fact Model} (\textbf{DFM}), while for the logical level, the \textbf{Relational Data Model} and the \textbf{Multidimensional Cube Model}.
+
+\subsection{Dimensional Fact Model}
+
+A data warehouse is based on a multidimensional model, i.e., a model that takes in consideration multiple business dimensions to allow the user to explore aggregated information across many possible dimensional combinations to get a full perspective on the data. The Dimensional Fact Model is a graphical conceptual model for data warehouses. The following are its basic elements.
+
+\paragraph{Facts} The most important abstraction mechanism of the conceptual model is the collection of facts, which are observations of the performance of a business model. Facts are modeled as rectangles divided in two parts: the top contains the fact name, while the bottom contains a set of \textbf{measures}. A measure is a numerical property of a fact that describes one of its quantitative aspects of interest for analysis. Facts that are not associated with any measure are called \textit{factless fact}, although to keep terminology consistent, we will call them \textbf{measureless facts}. This type of fact is defined when there is only interest in counting its number of instances. \\
+Facts can be of different nature:
+\begin{itemize}
+    \item \textbf{Transaction facts} represent information on a specific event that occurred at a specific point in time during the execution of a business process, e.g., a withdrawal on a bank account.
+    \item \textbf{Periodic snapshot facts} represent the information on a series of events that have occurred over a period of time, e.g., the monthly summary of all transactions on a bank account.
+    \item \textbf{Accumulating snapshot facts} represent the information on the lifetime of an evolving event that has a duration and a change over time, e.g., a mortgage application which is done in several steps (presenting the documents, undergoing bank review, approval/refusal, completion).
+\end{itemize}
+Also measures can be classified in differen types:
+\begin{itemize}
+    \item \textbf{Additive/flow/rate measures} can be meaningfully aggregated with the function \textit{sum} by any dimension. This is the most common type of measure. An example may be the number of products sold in a day.
+    \item \textbf{Semi-additive/stock/level measures} can be meaningfully aggregated with the function \textit{sum} by certain dimensions, but not all. These measures refer to a particular point in time and are used to record the state of the event: for example, the monthly inventory quantity of a certain product. We say that a measure is semi-additive with respect to a dimension $D_1$ if it cannot be aggregated with the function \textit{sum} for groups of data with different values of $D_1$.
+    \item \textbf{Non-additive/value-per-unit measures} cannot be aggregated with the function \textit{sum} by any dimension. These measures are usually the result of ratios, so the only meaningful operation is counting the number of facts with a specific value. Other common non-additive measures are per-unit prices, measures of intensity (e.g., a temperature), or averages.
+    \item \textbf{Calculated measures} are derivated from other measures. These are used to avoid having users perform these calculations, such as calculating revenue from product price minus discount. 
+\end{itemize}
+
+\begin{figure}[ht]
+    \centering
+    \includesvg[width=0.5\textwidth]{img/facts.svg}
+    \caption{Graphical representation of facts.}
+\end{figure}
+
+\paragraph{Dimensions} Dimensions give facts a context. Graphically, they are represented by lines starting from the corresponding fact and ending with a circle. A dimension may also be described by a set of attributes, which are drawn as lines ending with a circle connected to the ``main'' circle of the dimension. Each attribute is also labeled with its unique name, and the same name should not be used for attributes of different dimensions.
+
+In some cases, an interesting aspect to model is a hierarchical relationship between attributes. Using relational data model terminology, a hierarchy can be defined when there is a functional dependency between attributes: for example, if we define the dimension \textit{Date}, with attributes \textit{Day}, \textit{Month}, \textit{Year}, then we can define the hierarchy \textit{Day} $\rightarrow$ \textit{Month} $\rightarrow$ \textit{Year}. The same attribute may even appear in multiple hierarchical structures for the same dimension: if we also add the attribute \textit{Week}, then we can define \textit{Week} $\rightarrow$ \textit{Year} (this is because a week can overlap multiple months, so it does not belong to the previous dependency chain). A dimension without attributes is called \textbf{degenerate}.
+\begin{figure}[H]
+    \centering
+    \includesvg[width=0.5\textwidth]{img/dimensions.svg}
+    \caption{Graphical representation of dimensions.}
+\end{figure}
+The key steps to design a DFM schema are the following:
+\begin{enumerate}[noitemsep]
+    \item Gather requirements, identifying the key elements to insert in the model.
+    \item Identify the granularity of the fact, i.e., the level of detail at which the fact will be represented. Granularity determines which measures and dimensions will appear in the model. As a general rule, it is best to choose a fine grain, even if it increases the number of facts to be treated, since later on, aggregation functions can always reduce the level of detail.
+    \item Identify the fact measures. Not everything that is numeric is necessarily a measure.
+    \item Identify the dimensions and dimensional attributes. To discern dimensions in the original requirements analysis, it is useful to consider the classic 5W-1H questions.
+    \item If possible, identify any dimensional attribute hierarchy.
+\end{enumerate}
+

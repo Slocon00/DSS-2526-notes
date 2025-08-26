@@ -1,0 +1,55 @@
+\documentclass[12pt]{report}
+\usepackage{graphicx} % Required for inserting images
+\linespread{1.2}
+\usepackage[top=2cm, bottom=2cm, left=2.5cm, right=2.5cm, centering]{geometry}
+\usepackage{float} 
+\usepackage[]{hyperref}
+\usepackage{svg}
+\usepackage{enumitem}
+
+\usepackage[dvipsnames]{xcolor}
+\usepackage{tikz}
+\usepackage[breakable]{tcolorbox}
+\appto{\bibsetup}{\raggedright}
+
+\tikzstyle{mybox} = [draw=BrickRed, fill=BrickRed!5, ultra thick, rectangle, rounded corners, inner sep=10pt, inner ysep=15pt, text width=0.90\textwidth, align=left] 
+\tikzstyle{boxtitle} = [fill=BrickRed, text=Apricot!20, ultra thick, rectangle, rounded corners, inner sep=10pt, inner ysep=8pt, text width=0.90\textwidth]
+
+\newcommand{\BoxDef}[2]{%
+\vspace*{1.0px}
+\noindent
+\begin{center}
+\begin{tikzpicture}
+    \node[mybox](box){\rule{0pt}{33pt}\ignorespaces#2\unskip};
+    \node[boxtitle, anchor=north west] at (box.north west) {\textbf{#1}};
+\end{tikzpicture}
+\end{center}
+}
+
+\begin{document}
+
+\begin{titlepage}
+    \hrule
+    \vspace{15pt}
+    \begin{center}
+        \Huge{\textbf{\Huge \textbf{Decision Support Databases 25-26}} \\ Notes}\\
+    \end{center}
+    \vspace{15pt}
+    \hrule
+    \vfill
+    \hrule
+    \begin{center}
+        \Large University of Pisa \\ M.Sc. in Data Science and Business Informatics
+    \end{center}
+\end{titlepage}
+
+\tableofcontents
+
+\input{1 Intro.tex}
+\input{2 Modeling.tex}
+
+\nocite{*}
+\bibliographystyle{plain}
+\clearpage\bibliography{bibliography}
+
+\end{document}

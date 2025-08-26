@@ -1,0 +1,91 @@
+\chapter{Introduction}
+
+In modern society, organizations accumulate large amounts of data, stored and managed by computers via a DBMS (Database Management System). However, this data is often underutilized, and important decisions are still based on intuition rather than informed decisions derived from data analysis. Decision support information systems are specific types of information systems designed for summarizing large amounts of data in a form that is easy to interpret. Analysis performed by such systems goes beyond simple queries executed by traditional DBMSs on operational databases, which are optimized for on-line transaction processing. Organizations maintain a separate database, called data warehouse, specifically organized for decision support applications.
+
+\BoxDef{Data, Information, Knowledge}{
+    \textbf{Data} is a representation of facts, concepts, or instructions without context, which can be processed by computers.
+
+    \textbf{Information} is data (raw or in a condensed form) interpreted within a certain context.
+
+    \textbf{Knowledge} is information that expands the recipient's capability of understanding reality, allowing them to make predictions, decisions, and take actions.
+}
+
+
+
+Each organization has a set of specific goals to pursue, and to achieve these goals, it uses a \textbf{structure}, a set of \textbf{resources}, and a set of \textbf{processes} that transform resources into goods and services. Processes can be classified in three categories according to the \textbf{Anthony triangle}: \textbf{strategic activities} (for long-range planning), \textbf{tactical activities} (for short term planning and control), and \textbf{operational activities} (for day to day operations). For any process, information is a key resource; different organizations will have different information needs, depending on their structure, resources, and processes. Information systems are designed to satisfy these needs.
+
+\section{Information Systems}
+
+\BoxDef{Information System}{
+    An \textbf{information system} is an organized collection of resources, people, and procedures finalized to collect, store, process, and communicate the information needed to support the on-going activities of an organization.
+}
+A computerized information system is a type of information system where information is stored and processed by a computer. From now on, we will simply refer to computerized information systems as information systems. \\
+Information systems can be classified into three categories:
+\begin{itemize}
+    \item \textbf{Operational}: data is organized in a database, which is managed by a traditional DBMS and interacted with using transactions. This type of system is used for day-to-day operations;
+    \item \textbf{Decision Support}: data is organized in a dedicated data warehouse, managed by a specialized DBMS. This type of system is used for Business Intelligence applications, i.e., to search for useful insight to support decision making. DSS have been developed in the late 70's to help managers in making decisions of three types:
+    \begin{itemize}
+        \item \textbf{Structured}: for which a well-defined decision-making procedure exists;
+        \item \textbf{Unstructured}: for which a well-defined decision-making procedure does not exists, so that the decision will only depend on manager experience;
+        \item \textbf{Semi-structured}: when the decision-making procedure is partly defined, so it also requires manager input.
+    \end{itemize}
+    \item \textbf{Web-based}: for E-commerce, to bring the business to the Web.
+\end{itemize}
+
+\section{Data Warehouses}
+
+\BoxDef{Data Warehouse}{
+    A \textbf{data warehouse} is a subject-oriented, integrated, nonvolatile, and time-varying collection of data in support of management's decisions.
+}
+A data warehouse is a specialized type of database that stores data by subject, not by applications (\textit{subject-oriented}), includes data from multiple heterogeneous sources and merged in a coherent form (\textit{integrated}), is not changed interactively via transactions, but is updated periodically to add or delete data (\textit{nonvolatile}), and it contains historical data that describes the state of the enterprise at different points in time, unlike operational databases where data is kept up-to-date (\textit{time-varying}). A special type of data warehouse is the \textbf{data mart}, which is focused on data regarding only one subject and is usually smaller in size.
+
+Three types of decision support can be provided. \textbf{Reports}, which are simple presentations of data in a structured format, \textbf{multidimensional analysis}, which also allows users to interactively explore data from different perspectives, and \textbf{data mining/exploratory data analysis}, where algorithms are used to automatically discover interesting patterns or relationships in data.
+
+The reasons for separating operational databases from data warehouses are mainly two: first, complex data analysis queries would degrade the performance of operational DBMSs, which are optimized for on-line transaction processing; second, the two systems have different structures, contents, and uses, since operational databases do not store any historical data and do not integrate different sources. Traditional applications that use databases are called \textbf{OLTP} (\textbf{On-Line Transaction Processing}), while decision support applications that use data warehouses are called \textbf{OLAP} (\textbf{On-Line Analytical Processing}).
+
+\subsection{Data Warehousing Architectures}
+
+The process of bringing data from operational database sources into a single data warehouse is called \textbf{data warehousing}. In practice, three types of solutions are adopted.
+\paragraph{Single-Layer Architecture} There is only one layer of data managed by the operational system. The data warehouse is defined as a view on the operational database, but is not a physically separate component. This solution is very low-cost and easy to implement, and as such is often used by small organizations. Of course, it does not actually separate operational and analytical operations, so it is not suitable for large organizations.
+\begin{figure}[h]
+    \centering
+    \includesvg[width=0.45\textwidth]{img/single_layer.svg}
+    \caption{Single-Layer Architecture.}
+\end{figure}
+
+\paragraph{Two-Layer Architecture} The data warehouse is a separate component from the operational database and is managed by its dedicated DBMS. The warehouse is loaded with data via \textbf{ETL} (\textbf{Extract, Transform, Load}) applications from the operational database and any other external source, which also brings this data in a consistent format and updates it periodically.
+\begin{figure}[h]
+    \centering
+    \includesvg[width=0.7\textwidth]{img/two_layer.svg}
+    \caption{Two-Layer Architecture.}
+\end{figure}
+
+\paragraph{Three-Layer Architecture} The third layer is called \textbf{data staging}. It contains data obtained via integration in the ETL process and prepares it to be loaded into the data warehouse, and may be implemented at different levels of complexity (it can be as simple as a set of files and as complex as a fully developed relational database). In this solution, extraction and integration is separated from reorganization and loading.
+\begin{figure}[h]
+    \centering
+    \includesvg[width=0.7\textwidth]{img/three_layer.svg}
+    \caption{Three-Layer Architecture.}
+\end{figure}
+
+\subsection{What to Model}
+
+Data must be organized taking into account how managers will use it to support their decisions about the performance of key business processes. More precisely, the relevant information to model are:
+\begin{itemize}
+    \item \textbf{Facts}: managers are interested in analyzing facts (i.e., observations) about the performance of a process;
+    \item \textbf{Measures}: facts are accompanied by numerical attributes called measures (such as quantities, sizes, costs, revenues, etc.);
+    \item \textbf{Dimensions}: managers think in terms of business dimensions, which give facts a context to make them meaningful. A dimension is often described by a set of attributes. If this is not true, it is called a \textit{degenerate dimension};
+    \item \textbf{Metrics}: measures are analyzed via summaries called metrics, obtained by applying aggregation functions over facts by certain dimensions or combinations of dimensions.  Common metrics are about economic performance, but when they relate to efficiency and quality they are called \textbf{Key Performance Indicators} (\textbf{KPI} for short).
+    
+    Aggregation functions are classified in three categories:
+    \begin{itemize}
+        \item \textbf{Distributive}: \textit{sum()}, \textit{count()}, \textit{max()}, \textit{min()}.
+        \item \textbf{Algebraic}: \textit{avg()}, \textit{stddev()}, \textit{var()}.
+        \item \textbf{Holistic}: \textit{median()}, \textit{mode()}, \textit{rank()}.
+    \end{itemize}
+    \item \textbf{Hierarchies}: managers are also interested in analyzing metrics at different levels of detail, by exploiting the fact that certain dimensions have a set of attributes that form a hierarchy (e.g., date can be broken down into year, semester, quarter, month, day).
+\end{itemize}
+A hierarchy always implies a functional dependency between the attributes involved.
+\BoxDef{Functional Dependency}{
+    Given a relation schema $R$ and $X,Y$ subsets of attributes of $R$, a functional dependency $X \rightarrow Y$ is a constraint that specifies that for every possible instance $r$ of $R$ and for any two tuples $t_1, t_2 \in r$, $t_1[X] = t_2[X]$ implies $t_1[Y] = t_2[Y]$.
+}
+In simpler terms, a functional dependency $X \rightarrow Y$ means that any time we know the value that a tuple takes in $X$ we can uniquely determine the value it takes in $Y$. In the date example, there is the following functional dependency: day $\rightarrow$ month $\rightarrow$ quarter $\rightarrow$ semester $\rightarrow$ year. Note that in order for the hierarchy to hold, the day attribute must also include the specific month and year, the month attribute must include the year, and so on.
