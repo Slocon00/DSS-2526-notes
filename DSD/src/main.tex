@@ -3,9 +3,10 @@
 \linespread{1.2}
 \usepackage[top=2cm, bottom=2cm, left=2.5cm, right=2.5cm, centering]{geometry}
 \usepackage{float} 
-\usepackage[]{hyperref}
 \usepackage{svg}
 \usepackage{enumitem}
+\usepackage{imakeidx}
+\usepackage{hyperref}
 
 \usepackage[dvipsnames]{xcolor}
 \usepackage{tikz}
@@ -15,7 +16,7 @@
 \tikzstyle{mybox} = [draw=BrickRed, fill=BrickRed!5, ultra thick, rectangle, rounded corners, inner sep=10pt, inner ysep=15pt, text width=0.90\textwidth, align=left] 
 \tikzstyle{boxtitle} = [fill=BrickRed, text=Apricot!20, ultra thick, rectangle, rounded corners, inner sep=10pt, inner ysep=8pt, text width=0.90\textwidth]
 
-\newcommand{\BoxDef}[2]{%
+\newcommand{\BoxDef}[2]{\index{#1}%
 \vspace*{1.0px}
 \noindent
 \begin{center}
@@ -25,6 +26,8 @@
 \end{tikzpicture}
 \end{center}
 }
+
+\makeindex
 
 \begin{document}
 
@@ -47,6 +50,8 @@
 
 \input{1 Intro.tex}
 \input{2 Modeling.tex}
+
+\printindex
 
 \nocite{*}
 \bibliographystyle{plain}
