@@ -120,11 +120,34 @@ Relationships between relations are expressed using \textbf{foreign keys}, which
 \end{center}
 where attribute \textit{StudentCode} is the primary key of \textit{Students}, and the pair \textit{Subject}, \textit{Candidate} is the primary key of \textit{Exams}. Since the attribute \textit{Candidate} takes values that match those of \textit{StudentCode}, it is a foreign key.
 
-\paragraph{Relational Algebra} 
+\paragraph{Relational Algebra} Relational algebra is a set of operators on relations whose results are also relations. Expressions in relational algebra are called \textbf{queries}, and the standard language used by DBMSs to write queries is SQL (Structured Query Language): it is a declarative language, meaning that the user specifies what data to retrieve, and not how to retrieve it. There are six fundamental operations, plus additional operations that can be derived from them. These operations are:
+\begin{itemize}
+    \item \textbf{Rename} $\rho_{A_1 \leftarrow B_1, \ldots, A_m \leftarrow B_m} (R)$: assigns a new name to attributes. $A_1, \ldots, A_m$ are attributes of relation $R$, and $B_1, \ldots, B_m$ are not. The result is a relation with type $\{(B_1:T_1, \ldots, B_m:T_m)\}$, whose tuples are those of $R$ with renamed attributes.
+    \item \textbf{Project} $\pi_{A_1, \ldots, A_m} (R)$: selects a subset of attributes from the relation $R$, deleting any duplicate. The result is a relation with type $\{(A_1:T_1, \ldots, A_m:T_m)\}$, whose tuples are those of $R$ restricted to attributes $A_1, \ldots, A_m$.
+    \item \textbf{Generalized project} $\pi_{\textit{exp}_1 \text{ AS }B_1, \ldots, \textit{exp}_n \text{ AS }B_n} (R)$: a combination of projection and renaming that also allows the output to contain the result of expressions. $\textit{exp}_1,\ldots,\textit{exp}_n$ are arithmetic expressions that involve constants and attributes of $R$, and $B_1, \ldots, B_n$ are attribute names. The result is a relation with type $\{(B_1:T_{\text{exp}_1}, \ldots, B_n:T_{\text{exp}_n})\}$.
+    \item \textbf{Select} $\sigma_{\textit{cond}} (R)$: selects the tuples in $R$ that satisfy the condition $\textit{cond}$. This condition is a propositional logic expression ($\land, \lor, \lnot$) over comparison predicates ($\leq, <, \geq, >, =, \not =$) and arithmetic expressions ($+,-,*,\div$).
+    \item \textbf{Grouping} $_{A_1, \ldots, A_n} \gamma_{f_1, \ldots, f_k} (R)$: returns a relation whose tuples are grouped by the values of the specified attributes, and applies the specified aggregate functions to the remaining attributes. $A_1, \ldots, A_n$ must be attributes of $R$, and $f_1, \ldots, f_k$ are aggregate functions (min, max, count, sum, average, etc.) calculated over one or more of the grouped attributes. The relation type of the result is $\{(A_1:T_1, \ldots, A_n:T_n, f_1:T_{f_1}, \ldots, f_k:T_{f_k})\}$.
+    \item \textbf{Generalized grouping} $_{A_1, \ldots, A_n} \gamma_{f_1 \text{ AS } F_1, \ldots, f_k \text{ AS } F_k} (R)$: extends the grouping operation by allowing the renaming of attributes obtained via aggregation functions. The relation type of the result is $\{(A_1:T_1, \ldots, A_n:T_n, F_1:T_{f_1}, \ldots, F_k:T_{f_k})\}$.
+    \item \textbf{Union} $R \cup S$: returns the union of the two sets of tuples in $R$ and $S$, given that they have the same relation type.
+    \item \textbf{Set difference} $R - S$: returns the set of tuples in $R$ that are not also in $S$, given that they have the same relation type.
+    \item \textbf{Product} $R \times S$: given $T$ of type $\{(A_1:T_1, \ldots, A_n:T_n)\}$ and $S$ of type $\{(A_{n+1}:T_{n+1}, \ldots, A_{n+m}:T_{n+m})\}$ with disjoint set of attributes, the product operator returns a relation of type $\{A_1:T_1, \ldots, A_n:T_n, A_{n+1}:T_{n+1}, \ldots A_{n+m}:T_{n+m}\}$, whose tuples are all possible cominations of tuples in $R$ and $S$.
+    \item \textbf{Join} $R \underset{A_i = A_j}{\bowtie} S$: combines tuples from $R$ and $S$ that have the same values for the attributes $A_i$ of $R$ and $A_j$ of $S$. The two relations have type $\{(A_1:T_1, \ldots, A_n:T_n)\}$ and $\{(A_{n+1}:T_{n+1}, \ldots, A_{n+m}:T_{n+m})\}$, and have a disjoint set of attributes. This operation is equivalent to calculating $\sigma_{A_i = A_j} (R \times S)$.
+    \item \textbf{Intersection} $R \cap S$: returns the set of tuples that are present in both $R$ and $S$, given that they have the same relation type.
+    \item \textbf{Natural join} $R \bowtie S$: a special case of join that is only applicable when the two relations have attributes with the same name. It combines tuples in $R$ and $S$ that have the same values for all attributes with the same name in both.
+\end{itemize}
+There are also a series of \textbf{equivalence rules} to simplify expressions:
+\begin{align*}
+    &\pi_A(\pi_{A,B}(R)) \equiv \pi_A(R) &(\text{Cascading of projections})\\
+    &\sigma_{\textit{cond}_1}(\sigma_{\textit{cond}_2}(R)) \equiv \sigma_{\textit{cond}_1 \land \textit{cond}_2}(R) &(\text{Cascading of selections})\\
+    &\sigma_{\textit{cond}_R \land \textit{cond}_S}(R \bowtie S) \equiv \sigma_{\textit{cond}_R}(R) \bowtie \sigma_{\textit{cond}_S}(S) &(\text{Commutativity of selection and join})\\
+    &R \bowtie (S \bowtie T) \equiv (R \bowtie S) \bowtie T &(\text{Associativity of join})\\
+    &R \bowtie S \equiv S \bowtie R &(\text{Commutativity of join})\\
+    &\sigma_{\textit{cond}_X}(_X \gamma_{F}(R)) \equiv _X \gamma_{F}(\sigma_{\textit{cond}_X}(R)) &(\text{Selection distributes over grouping})
+\end{align*}
 
 \section{Modeling for Data Warehouses}
 
-This section will introduce three models to define the structure of a data warehouse: for the conceptual level, the \textbf{Dimensional Fact Model} (\textbf{DFM}), while for the logical level, the \textbf{Relational Data Model} and the \textbf{Multidimensional Cube Model}.
+This section will introduce three models to define the structure of a data warehouse: for the conceptual level, the \textbf{Dimensional Fact Model} (\textbf{DFM}), while for the logical level, the \textbf{Multidimensional Relational Model} and the \textbf{Multidimensional Cube Model}.
 
 \subsection{Dimensional Fact Model}
 
@@ -154,6 +177,15 @@ Also measures can be classified in differen types:
 \paragraph{Dimensions} Dimensions give facts a context. Graphically, they are represented by lines starting from the corresponding fact and ending with a circle. A dimension may also be described by a set of attributes, which are drawn as lines ending with a circle connected to the ``main'' circle of the dimension. Each attribute is also labeled with its unique name, and the same name should not be used for attributes of different dimensions.
 
 In some cases, an interesting aspect to model is a hierarchical relationship between attributes. Using relational data model terminology, a hierarchy can be defined when there is a functional dependency between attributes: for example, if we define the dimension \textit{Date}, with attributes \textit{Day}, \textit{Month}, \textit{Year}, then we can define the hierarchy \textit{Day} $\rightarrow$ \textit{Month} $\rightarrow$ \textit{Year}. The same attribute may even appear in multiple hierarchical structures for the same dimension: if we also add the attribute \textit{Week}, then we can define \textit{Week} $\rightarrow$ \textit{Year} (this is because a week can overlap multiple months, so it does not belong to the previous dependency chain). A dimension without attributes is called \textbf{degenerate}.
+
+Although not explicitly modeled at this level, the concept of changing over time is typically reported in the documentation, to be considered in the next phases. \textbf{Changing dimensions} are those dimensions whose attribute values may change over time. For example, a customer's address, phone number, or marital status; a student's enrollment status or major; a product's price or discount. There are four types of changing dimensions, the first three of which are \textbf{slowly changing dimensions}, and the last one being the \textbf{fast changing dimension}.
+\begin{itemize}
+    \item \textbf{Type 1: overwriting the history}. When a dimensional attribute is updated, only the latest value is held in the data warehouse. This solution does not preserve the sequence of changes each attribute undergoes over time, potentially leading to a loss of context. For example, imagine a \textit{Customer} dimension that contains various attributes, including the address. One customer changes residence from Rome to Milan, all sales that involved this customer will now consider the new Milan address, even if they occurred before the address change.
+    \item \textbf{Type 2: preserving all history}. Both old and new values of the attribute are held, without changing the structure of dimensions. In practice, this means that each value change produces a new record in the data warehouse.
+    \item \textbf{Type 3: preserving one or more versions of history}. If a dimensional attribute changes value, the structure of the dimension is extended with one or more additional attributes to keep track of different versions, as well as a timestamp that stores the date of the change. In the address change example, a new attribute \textit{OldAddress} is created to keep the previous value with the Rome address, and the \textit{address} attribute is updated with the Milan one. This solution is seldom used.
+    \item \textbf{Type 4: fast changing}. The dimensional attribute changes very frequently (e.g., a status that is updated each few hours or minutes).
+\end{itemize}
+
 \begin{figure}[H]
     \centering
     \includesvg[width=0.5\textwidth]{img/dimensions.svg}
@@ -168,3 +200,29 @@ The key steps to design a DFM schema are the following:
     \item If possible, identify any dimensional attribute hierarchy.
 \end{enumerate}
 
+\subsection{Multidimensional Relational Model}
+
+A conceptual model is transformed into a relational logical schema by applying a set of mapping rules. The main relational DBMS vendors provide OLAP servers that map operations on multidimensional data to standard relational operations on specialized relational DBMS to store and manage data warehouses. Such servers are called \textbf{ROLAP} (relational OLAP).
+
+The basic elements of logical schemas are the \textbf{fact table} and the \textbf{dimension table}: a fact table stores all the measures of the corresponding fact and any necessary foreign keys to the dimension tables, while a dimension table stores all the attributes of the corresponding dimension, and eventually foreign keys to other dimension tables. Schemas can follow three possible structures: \textbf{star schema}, \textbf{snowflake schema}, or \textbf{constellation schema}. 
+
+\paragraph{Star Schema} A star schema consists of one fact table and a set of dimension tables, one per dimension in the conceptual model. Each dimension table has a single attribute as primary key, modeling a one-to-many relationship with the foreign key in the fact table. The primary key attribute is usually a sequentially increasing integer called \textbf{surrogate key}, going from 1 to the total number of records in the table. Dates are also often assigned an integer surrogate key in the form \textit{YYYYMMDD}, with the granularity of a day, while the remaining attributes simply specify the generic month/year/quarter/week/etc. the date corresponds to. This structure is called ``star'' because the fact table is at the center and the dimension tables, which radiate out from it, look like the points of a star.
+\begin{figure}[ht]
+    \centering
+    \includesvg[width=0.55\textwidth]{img/star_schema.svg}
+    \caption{Example of a star schema.}
+\end{figure}
+
+\paragraph{Snowflake Schema} In a snowflake schema, some dimension tables are normalized, splitting the data into additional tables. Its advantage is the reduction of redundancy in the dimension tables and therefore a reduction in storage space, however it is often a negligible improvement in comparison to the size of the fact table, and the increased complexity of certain queries that require hierarchies to be traversed. As a result, this schema is not as popular as the star schema.
+\begin{figure}[ht]
+    \centering
+    \includesvg[width=0.75\textwidth]{img/snowflake_schema.svg}
+    \caption{Example of a snowflake schema.}
+\end{figure}
+
+\paragraph{Constellation Schema} A constellation schema is obtained by fusing multiple schemas with one or more dimensions in common. The result is a schema with several fact tables that share dimension tables.
+\begin{figure}[ht]
+    \centering
+    \includesvg[width=0.7\textwidth]{img/constellation_schema.svg}
+    \caption{Example of a constellation schema.}
+\end{figure}
