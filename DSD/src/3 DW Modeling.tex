@@ -1,0 +1,199 @@
+\chapter{Modeling for Data Warehouses}
+
+This chapter will illustrate the main design approaches and methodologies to create a data warehouse, and introduce the data models used to represent its structure.
+
+\section{Data Models}
+
+This section will introduce three models to define the structure of a data warehouse: for the conceptual level, the \textbf{Dimensional Fact Model} (\textbf{DFM}), while for the logical level, the \textbf{Multidimensional Relational Model} and the \textbf{Multidimensional Cube Model}.
+
+\subsection{Dimensional Fact Model}
+
+A data warehouse is based on a multidimensional model, i.e., a model that takes in consideration multiple business dimensions to allow the user to explore aggregated information across many possible dimensional combinations to get a full perspective on the data. The Dimensional Fact Model is a graphical conceptual model for data warehouses. The following are its basic elements.
+
+\paragraph{Facts} The most important abstraction mechanism of the conceptual model is the collection of facts, which are observations of the performance of a business model. Facts are modeled as rectangles divided in two parts: the top contains the fact name, while the bottom contains a set of \textbf{measures}. A measure is a numerical property of a fact that describes one of its quantitative aspects of interest for analysis. Facts that are not associated with any measure are called \textit{factless fact}, although to keep terminology consistent, we will call them \textbf{measureless facts}. This type of fact is defined when there is only interest in counting its number of instances. \\
+Facts can be of different nature:
+\begin{itemize}
+    \item \textbf{Transaction facts} represent information on a specific event that occurred at a specific point in time during the execution of a business process, e.g., a withdrawal on a bank account.
+    \item \textbf{Periodic snapshot facts} represent the information on a series of events that have occurred over a period of time, e.g., the monthly summary of all transactions on a bank account.
+    \item \textbf{Accumulating snapshot facts} represent the information on the lifetime of an evolving event that has a duration and a change over time, e.g., a mortgage application which is done in several steps (presenting the documents, undergoing bank review, approval/refusal, completion).
+\end{itemize}
+Also measures can be classified in differen types:
+\begin{itemize}
+    \item \textbf{Additive/flow/rate measures} can be meaningfully aggregated with the function \textit{sum} by any dimension. This is the most common type of measure. An example may be the number of products sold in a day.
+    \item \textbf{Semi-additive/stock/level measures} can be meaningfully aggregated with the function \textit{sum} by certain dimensions, but not all. These measures refer to a particular point in time and are used to record the state of the event: for example, the monthly inventory quantity of a certain product. We say that a measure is semi-additive with respect to a dimension $D_1$ if it cannot be aggregated with the function \textit{sum} for groups of data with different values of $D_1$.
+    \item \textbf{Non-additive/value-per-unit measures} cannot be aggregated with the function \textit{sum} by any dimension. These measures are usually the result of ratios, so the only meaningful operation is counting the number of facts with a specific value. Other common non-additive measures are per-unit prices, measures of intensity (e.g., a temperature), or averages.
+    \item \textbf{Calculated measures} are derivated from other measures. These are used to avoid having users perform these calculations, such as calculating revenue from product price minus discount. 
+\end{itemize}
+
+\begin{figure}[ht]
+    \centering
+    \includesvg[width=0.5\textwidth]{img/facts.svg}
+    \caption{Graphical representation of facts.}
+\end{figure}
+
+\paragraph{Dimensions} Dimensions give facts a context. Graphically, they are represented by lines starting from the corresponding fact and ending with a circle. A dimension may also be described by a set of attributes, which are drawn as lines ending with a circle connected to the ``main'' circle of the dimension. Each attribute is also labeled with its unique name, and the same name should not be used for attributes of different dimensions.
+
+In some cases, an interesting aspect to model is a hierarchical relationship between attributes. Using relational data model terminology, a hierarchy can be defined when there is a functional dependency between attributes: for example, if we define the dimension \textit{Date}, with attributes \textit{Day}, \textit{Month}, \textit{Year}, then we can define the hierarchy \textit{Day} $\rightarrow$ \textit{Month} $\rightarrow$ \textit{Year}. The same attribute may even appear in multiple hierarchical structures for the same dimension: if we also add the attribute \textit{Week}, then we can define \textit{Week} $\rightarrow$ \textit{Year} (this is because a week can overlap multiple months, so it does not belong to the previous dependency chain). A dimension without attributes is called \textbf{degenerate}.
+
+Although not explicitly modeled at this level, the concept of changing over time is typically reported in the documentation, to be considered in the next phases. \textbf{Changing dimensions} are those dimensions whose attribute values may change over time. For example, a customer's address, phone number, or marital status; a student's enrollment status or major; a product's price or discount. There are four types of changing dimensions, the first three of which are \textbf{slowly changing dimensions}, and the last one being the \textbf{fast changing dimension}.
+\begin{itemize}
+    \item \textbf{Type 1: overwriting the history}. When a dimensional attribute is updated, only the latest value is held in the data warehouse. This solution does not preserve the sequence of changes each attribute undergoes over time, potentially leading to a loss of context. For example, imagine a \textit{Customer} dimension that contains various attributes, including the address. One customer changes residence from Rome to Milan, all sales that involved this customer will now consider the new Milan address, even if they occurred before the address change.
+    \item \textbf{Type 2: preserving all history}. Both old and new values of the attribute are held, without changing the structure of dimensions. In practice, this means that each value change produces a new record in the data warehouse.
+    \item \textbf{Type 3: preserving one or more versions of history}. If a dimensional attribute changes value, the structure of the dimension is extended with one or more additional attributes to keep track of different versions, as well as a timestamp that stores the date of the change. In the address change example, a new attribute \textit{OldAddress} is created to keep the previous value with the Rome address, and the \textit{address} attribute is updated with the Milan one. This solution is seldom used.
+    \item \textbf{Type 4: fast changing}. The dimensional attribute changes very frequently (e.g., a status that is updated each few hours or minutes).
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includesvg[width=0.5\textwidth]{img/dimensions.svg}
+    \caption{Graphical representation of dimensions.}
+\end{figure}
+The key steps to design a DFM schema are the following:
+\begin{enumerate}[noitemsep]
+    \item Gather requirements, identifying the key elements to insert in the model.
+    \item Identify the granularity of the fact, i.e., the level of detail at which the fact will be represented. Granularity determines which measures and dimensions will appear in the model. As a general rule, it is best to choose a fine grain, even if it increases the number of facts to be treated, since later on, aggregation functions can always reduce the level of detail.
+    \item Identify the fact measures. Not everything that is numeric is necessarily a measure.
+    \item Identify the dimensions and dimensional attributes. To discern dimensions in the original requirements analysis, it is useful to consider the classic 5W-1H questions.
+    \item If possible, identify any dimensional attribute hierarchy.
+\end{enumerate}
+
+\subsection{Multidimensional Relational Model}
+
+A conceptual model is transformed into a relational logical schema by applying a set of mapping rules. The main relational DBMS vendors provide OLAP servers that map operations on multidimensional data to standard relational operations on specialized relational DBMS to store and manage data warehouses. Such servers are called \textbf{ROLAP} (relational OLAP).
+
+The basic elements of logical schemas are the \textbf{fact table} and the \textbf{dimension table}: a fact table stores all the measures of the corresponding fact and any necessary foreign keys to the dimension tables, while a dimension table stores all the attributes of the corresponding dimension, and eventually foreign keys to other dimension tables.
+
+Schemas can follow three possible structures: \textbf{star schema}, \textbf{snowflake schema}, or \textbf{constellation schema}. 
+
+\paragraph{Star Schema} A star schema consists of one fact table and a set of dimension tables, one per dimension in the conceptual model. Each dimension table has a single attribute as primary key, modeling a one-to-many relationship with the foreign key in the fact table. The primary key attribute is usually a sequentially increasing integer called \textbf{surrogate key}, going from 1 to the total number of records in the table. Dates are also often assigned an integer surrogate key in the form \textit{YYYYMMDD}, with the granularity of a day, while the remaining attributes simply specify the generic month/year/quarter/week/etc. the date corresponds to. Degenerate dimensions are either stored as attributes of the fact table, or in a \textbf{junk dimension} table, which lists all possible combinations of values of the degenerate dimensions. This structure is called ``star'' because the fact table is at the center and the dimension tables, which radiate out from it, look like the points of a star.
+\begin{figure}[ht]
+    \centering
+    \includesvg[width=0.55\textwidth]{img/star_schema.svg}
+    \caption{Example of a star schema.}
+\end{figure}
+
+\paragraph{Snowflake Schema} In a snowflake schema, some dimension tables are normalized, splitting the data into additional tables. Its advantage is the reduction of redundancy in the dimension tables and therefore a reduction in storage space, however it is often a negligible improvement in comparison to the size of the fact table, and the increased complexity of certain queries that require hierarchies to be traversed. As a result, this schema is not as popular as the star schema.
+\begin{figure}[ht]
+    \centering
+    \includesvg[width=0.75\textwidth]{img/snowflake_schema.svg}
+    \caption{Example of a snowflake schema.}
+\end{figure}
+
+\paragraph{Constellation Schema} A constellation schema is obtained by fusing multiple schemas with one or more dimensions in common. The result is a schema with several fact tables that share dimension tables.
+\begin{figure}[ht]
+    \centering
+    \includesvg[width=0.7\textwidth]{img/constellation_schema.svg}
+    \caption{Example of a constellation schema.}
+\end{figure}
+
+\section{Design Approaches}
+
+Data warehouse design can be approached from two perspectives: an analysis-driven one, or a data-driven one. In an \textbf{analysis-driven} (\textit{bottom-up}, \textit{metric pull}) approach, data marts are designed based on the data analysis the users want to perform, and then integrated in a single data warehouse. An advantage of this approach is that the focus it to provide what is really needed by the users, rather than what is available, and is usually cheap and fast to implement. A disadvantage is that the data necessary for analysis may not be available, and if a user is too tight on the requirements, the design may miss useful data that is available in the operational system. This approach was first proposed by R. Kimball.
+
+In a \textbf{data-driven} (\textit{top-down}, \textit{data push}) approach, the data warehouse is designed around which data is currently available in the operational system, derivating the data marts afterwards. An initial design can help both users to discover new ways to use the data, and the designers to identify areas on which to focus more. A disadvantage is that it is a generally costly and time-consuming process, and without user involvement, the result may not be useful. This approach was first proposed by W. Inmon.
+
+In practice, these two approaches are used together in different steps. The main phases of data mart design are requirements analysis, initial conceptual design, candidate conceptual design, final conceptual design, and logical design.
+
+\paragraph{Requirements Analysis} Requirements analysis consists in two sub-phases, requirements gathering and requirements specification. \textbf{Requirements gathering} analyzes the nature and purpose of the business, identifying the important business processes and the business questions for which the data warehouse will be used to answer. This is done by directly interviewing the business users and data source system experts. \textbf{Requirements specification} uses the business questions found in the previous step to identify the facts, measures, metrics, and dimensions, as well as the granularity of data and dimensional attributes and hierarchies. The specific structure of the worksheet used to organize this information is the following:
+
+\begin{itemize}
+    \item \textbf{Business process requirements}: each business question of each process is analyzed individually to find dimensions, measures, and metrics.
+    \begin{table}[H]
+    \centering
+    \begin{tabular}{|c|c|c|c|c|}
+        \hline
+        No. & Business questions & Dimensions & Measures & Metrics \\
+        \hline
+    \end{tabular}
+    \end{table}
+    \item \textbf{Fact descriptions}: each identified fact is described in detail, including the preliminary dimensions and measures of the future data mart.
+    \begin{table}[H]
+    \centering
+    \begin{tabular}{|c|c|c|}
+        \hline
+        Grain, description, type & Preliminary dimensions & Preliminary measures \\
+        \hline
+    \end{tabular}
+    \end{table}
+    \item \textbf{Dimensions}: the meaning of each dimension is described, together with its grain.
+    \begin{table}[H]
+    \centering
+    \begin{tabular}{|c|c|c|}
+        \hline
+        Name & Description & Granularity \\
+        \hline
+    \end{tabular}
+    \end{table}
+    \item \textbf{Dimensional attributes}: each non-degenerate dimension is described by a number of attributes. It is good practice to use different names for attributes of different dimensions.
+    \begin{table}[H]
+    \centering
+    \begin{tabular}{|c|c|}
+        \hline
+        Attribute & Description \\
+        \hline
+    \end{tabular}
+    \end{table}
+    \item \textbf{Dimensional hierarchies}: any hierarchy between attributes of the same dimension is described, indicating the direction and type (balanced, ragged, or recursive).
+    \begin{table}[H]
+    \centering
+    \begin{tabular}{|c|c|c|}
+        \hline
+        Dimension & Hierarchy description & Hierarchy type \\
+        \hline
+    \end{tabular}
+    \end{table}
+    \item \textbf{Dimensional attribute changes}: if a dimension haschanging attributes, these are highlighted separately and annotated with the type (slowly changing of type 1, 2, 3, or fast changing/type 4).
+    \begin{table}[H]
+    \centering
+    \begin{tabular}{|c|c|c|}
+        \hline
+        Name & Changing attribute & Treatment of changes \\
+        \hline
+    \end{tabular}
+    \end{table}
+    \item \textbf{Measures and metrics}: each fact measure has a description, an aggregability type (e.g., additive, semi-additive, etc.) and a flag that indicates if it is calculated from other measures.
+    \begin{table}[H]
+    \centering
+    \begin{tabular}{|c|c|c|c|}
+        \hline
+        Measure & Description & Aggregability & Calculated \\
+        \hline
+    \end{tabular}
+    \end{table}
+    \item \textbf{Descriptive attributes of the facts}: contains each descriptive attribute of the identified facts.
+    \begin{table}[H]
+    \centering
+    \begin{tabular}{|c|c|}
+        \hline
+        Attribute & Description \\
+        \hline
+    \end{tabular}
+    \end{table}
+    \item \textbf{Summary of dimensions and measures (optional)}: if the requirements concern multiple facts, a summary table is used to track which dimensions and measures are associated with which fact. The summary table will have one column per dimension, working as a binary flag to indicate belonging.
+    \begin{table}[H]
+    \centering
+    \begin{tabular}{|c|c|c|c|}
+        \hline
+        Dimension & Fact 1 & ... & Fact $n$ \\
+        \hline
+    \end{tabular}
+    \hfill
+    \begin{tabular}{|c|c|c|c|}
+        \hline
+        Measure & Fact 1 & ... & Fact $n$ \\
+        \hline
+    \end{tabular}
+    \end{table}
+\end{itemize}
+
+\paragraph{Conceptual Design}
+
+The initial, analysis-driven conceptual design focuses on the user requirements; the candidate, data-driven design is built by considering the data actually available in the operational database. A key sub-phase of this data-driven step is \textbf{entity classification}, in which the tables of the operational database are classified into three possible categories:
+\begin{itemize}
+    \item \textbf{Transaction entities} are tables with records that represent events of interest that occur at a specific point of time and contain measurements or quantities that may be summarized.
+    \item \textbf{Component entities} are tables related to a transaction entity via a \textit{one-to-many} relationship. They define the details of each transaction event, so they are useful to answer the 5W-1H questions of a business event.
+    \item \textbf{Classification entities} are tables related to a component entity via a (chain of) \textit{one-to-many} relationship(s). They usually represent some hierarchy embedded in the data schema. Their more interesting attributes are collapsed into component entities to then define the dimensional attributes and hierarchies of the data mart.
+\end{itemize}
+The final design is obtained by comparing the previous two and finding a compromise between what is \textit{useful} and what can be \textit{delivered}.
+
+\paragraph{Logical Design} First, each final conceptual data mart design is translated into a relational schema, choosing the most appropriate structure (star or snowflake); then, if multiple data marts are designed, they are integrated in a single constellation schema, evaluating which facts and dimensions will be standardized and/or shared. Ideally, the translation must optimize query performance and maintain an intuitive user interface. Normalizing dimension tables, as mentioned in the previous sections, would typically interfere with both objectives.
