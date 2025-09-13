@@ -4,7 +4,7 @@ This chapter will illustrate the main design approaches and methodologies to cre
 
 \section{Data Models}
 
-This section will introduce three models to define the structure of a data warehouse: for the conceptual level, the \textbf{Dimensional Fact Model} (\textbf{DFM}), while for the logical level, the \textbf{Multidimensional Relational Model} and the \textbf{Multidimensional Cube Model}.
+This section will introduce three models to define the structure of a data warehouse: for the conceptual level, the \textbf{Dimensional Fact Model} (\textbf{DFM}), while for the logical level, the \textbf{Multidimensional Relational Model} and the \textbf{Multidimensional Cube Model} (which will be discussed in a later chapter).
 
 \subsection{Dimensional Fact Model}
 
@@ -37,9 +37,7 @@ In some cases, an interesting aspect to model is a hierarchical relationship bet
 
 Hierarchies may be \textbf{recursive}, when it involves the same dimension. For example, an \textit{employee} may have an assigned role that puts them in charge of other employees, as well as being managed by someone else; this relationship can be expressed via the \textit{supervisor} attribute, which allows the creation of a hierarchy of employees in a manager-subordinate relationship. Recursivity is represented by a crossed arrow that loops back in the same dimension.
 
-A dimension may also be \textbf{multivalued}, if the same fact involves multiple instances of the same dimension. For example, a product order is managed by two agents, or a medical treatment involves multiple doctors. Multivalued dimensions are represented by a double arrow head exiting from the fact table.
-
-A dimension without attributes is called \textbf{degenerate}. They are simply represented by a line exiting the fact table and a singular circle at the end without any additional attributes.
+A dimension may also be \textbf{multivalued}, if the same fact involves multiple instances of the same dimension. For example, a product order is managed by two agents, or a medical treatment involves multiple doctors. Multivalued dimensions are represented by a double arrow head exiting from the fact table. A dimension without attributes is called \textbf{degenerate}. They are simply represented by a line exiting the fact table and a singular circle at the end without any additional attributes. If a dimension is optional, it is represented by a dashed line.
 
 Although not explicitly modeled at this level, the concept of changing over time is typically reported in the documentation, to be considered in the next phases. \textbf{Changing dimensions} are those dimensions whose attribute values may change over time. For example, a customer's address, phone number, or marital status; a student's enrollment status or major; a product's price or discount. There are four types of changing dimensions, the first three of which are \textbf{slowly changing dimensions}, and the last one being the \textbf{fast changing dimension}.
 \begin{itemize}
@@ -223,8 +221,15 @@ The alternative is to eliminate the foreign key in the dimension table and build
 
 A final aspect to consider is \textbf{multivalued dimensions}. There are four possibilities:
 \begin{itemize}
-    \item The fact granularity is changed: instead of using one record for each fact instance, one record is used for each dimension instance. For example, if a product is sold by two agents, the fact table will record one row per agent sale, using a dedicated attribute to store the agent ``group'' that completed the sale. This increases the memory occupied by the fact table, by a factor equal to the average number of dimension instances ``participating'' in a single original fact.
-    \item An auxiliary table called \textbf{bridge table} is added to connect the fact table and the dimension table. This bridge table will contain one row per fact-dimension pair; in the agent example, if a product is sold by two agents, the bridge table will have two rows, one for each agent, pairing their primary key with the product primary key they jointly sold. This solution violates the properties of a star schema, and may not be accepted by some BI systems.
-    \item An auxiliary table with a \textit{one-to-many} relationship with the fact table. The auxiliary table has one attribute that stores the group, and another that stores a foreign key to the dimension table. This solution also permits additional attributes, such as \textit{allocation}, which indicates the percentage of participation of each dimension instance: e.g., two agents who collaborated may have worked equally and thus have an allocation of 50\% each, or one worked more and the workload was split 70\%-30\%.
-    \item Two auxiliary tables are used. The first table only stores one row per group, with a dedicated primary key, while the second one associates each entity of the dimension with. a group (similarly to the previous solution, but set up as a bridge table). This solution is usually accepted by BI systems.
+    \item The fact granularity is changed (Fig \ref{fig:multivalued_dimensions}a): instead of using one record for each fact instance, one record is used for each dimension instance. For example, if a product is sold by two agents, the fact table will record one row per agent sale, using a dedicated attribute to store the agent ``group'' that completed the sale. This increases the memory occupied by the fact table, by a factor equal to the average number of dimension instances ``participating'' in a single original fact.
+    \item An auxiliary table, called \textbf{bridge table}, is added to connect the fact table and the dimension table (Fig. \ref{fig:multivalued_dimensions}b). This bridge table will contain one row per fact-dimension pair; in the agent example, if a product is sold by two agents, the bridge table will have two rows, one for each agent, pairing their primary key with the product primary key they jointly sold. This solution violates the properties of a star schema, and may not be accepted by some BI systems.
+    \item An auxiliary table with a \textit{one-to-many} relationship with the fact table is added (Fig. \ref{fig:multivalued_dimensions}c). The auxiliary table has one attribute that stores the group, and another that stores a foreign key to the dimension table. This solution also permits additional attributes, such as \textit{allocation}, which indicates the percentage of participation of each dimension instance: e.g., two agents who collaborated may have worked equally and thus have an allocation of 50\% each, or one worked more and the workload was split 70\%-30\%.
+    \item Two auxiliary tables are used, with a middle one acting as a bridge table between the other and the dimension table (Fig. \ref{fig:multivalued_dimensions}d). The first table only stores one row per group, with a dedicated primary key, while the second one associates each entity of the dimension with a group. This solution is usually accepted by BI systems.
 \end{itemize}
+
+\begin{figure}[h]
+    \centering
+    \includesvg[width=1.0\textwidth]{img/multivalued_dimensions.svg}
+    \caption{Possible solutions for multivalued dimensions.}
+    \label{fig:multivalued_dimensions}
+\end{figure}

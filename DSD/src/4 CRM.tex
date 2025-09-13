@@ -1,0 +1,44 @@
+\chapter{Customer Relationship Management}
+
+Customer Relationship Management (CRM) is a set of processes and systems supporting a business strategy to build long-term, profitable relationships with specific customers. The CRM framework can be split into \textbf{operational CRM} and \textbf{analytical CRM}: the former refers to the automation of customer-facing processes (e.g., Marketing, Sales, Services), while the latter focuses on supporting decision making via the analysis of customer characteristics and behaviours. This chapter will introduce some key ideas behind CRM and show some examples on how to design a data warehouse for CRM applications.
+
+\section{Types of Analyses}
+
+The analytical CRM system provides useful information extracted by the analysis of data collected by the operational CRM system, and properly organized in a data warehouse based on the needs of the decision makers. The objective is to find both the best customers for more profitable relationships, and the customers with a high defection risk, i.e., who are more likely to interrupt their relationship with the company.
+
+A \textbf{CRM taxonomy} consists in a set of CRM analysis categories, their business questions, and KPIs used to measure the organization's performance. A typical CRM taxonomy includes the following categories:
+\begin{itemize}
+    \item \textbf{Sales and Marketing Analysis}: the analysis of product sales (by product, sales channel, geographic area, customer, etc.) to identify trends and patterns in order to plan and evaluate the effects of promotional campaigns.
+    \item \textbf{Profitability Analysis}: revenues from sales must be analyzed by taking into account the costs of production, marketing, and nonconformance. Profitability of sales is an indicator of the company's ability to maintain an advantage over competitors.
+    \item \textbf{Service Quality Analysis}: the success of a company also depends on how well customer demands and expectations are met. Analysis in this category is focused on finding the most common reasons for customer complaints or returns, as well as determining the ability to deliver orders fully and on time.
+    \item \textbf{Customer Analysis}: analysis of data on customers is used to group them based on their attributes, find out their spending habits and if/when their behaviour changes. Specific analyses include customer segmentation analysis, retention analysis, attrition (churn) analysis, and satisfaction analysis.
+\end{itemize}
+Below are some examples of data warehouse for each category.
+\begin{figure}[h]
+    \begin{minipage}{0.475\textwidth}
+        \centering
+    \includesvg[width=1.0\textwidth]{img/CRM_sales_marketing.svg}
+    \caption{Data warehouse for Sales and Marketing Analysis.}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.475\textwidth}
+        \centering
+    \includesvg[width=1.0\textwidth]{img/CRM_profitability.svg}
+    \caption{Data warehouse for Profitability Analysis. This one is obtained by adding the appropriate cost measures to the fact table of the previous example.}
+    \end{minipage}
+\end{figure}
+\begin{figure}[H]
+    \begin{minipage}
+        {0.475\textwidth}
+        \centering
+        \includesvg[width=1.0\textwidth]{img/CRM_service_quality.svg}
+        \caption{Data warehouse for Service Quality Analysis. Here, both new measures and new dimensions are introduced to the schema.}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.475\textwidth}
+        \centering
+        \includesvg[width=0.7\textwidth]{img/CRM_customer.svg}
+        \caption{Data warehouse for Customer Analysis. This schema is obtained by adding customer-related dimensional attributes to \textit{customer}.}
+    \end{minipage}
+\end{figure}
+Other than the \textit{sales} fact table, each data warehouse will likely contain other fact tables. For example, service quality analysis may require a \textit{returns} fact table to track product returns and analyze them by date, product, order, reason, etc. Similarly, customer analysis could include a \textit{customerTypology} fact table that not only tracks the category the customer belongs to (e.g., new, constant, occasional, inactive), but also any changes over time.
