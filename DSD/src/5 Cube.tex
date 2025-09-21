@@ -1,0 +1,45 @@
+\chapter{Multidimensional Data Cube Model}
+
+This chapter introduces the multidimensional (data) cube model, another logical model used in data warehousing to analyze data in aggregated form in an intuitive way. A multidimensional cube model represents facts with $n$ dimensions as points in an $n$-dimensional space; a point is identified by the values of dimensions, and has an associated set of measures. An example of a 3-dimensional cube is shown if Fig. \ref{fig:cube_model}. The following sections will describe the main operations that can be performed on cubes.
+
+\begin{figure}[h]
+    \centering
+    \includesvg[width=1.0\textwidth]{img/cube_model.svg}
+    \caption{Example of a 3-dimensional cube. \textit{Product}, \textit{Date}, and \textit{Store} are dimensions, while \textit{Qty} is a measure of a fact.}
+    \label{fig:cube_model}
+\end{figure}
+
+\section{OLAP Operations in the Data Cube}
+
+There are a few main operators that can be used to manipulate the data cube:
+\begin{itemize}
+    \item \textbf{Slice} and \textbf{dice}: both operators generate sub-cubes without summarizing any information. The \textit{slice} operator selects a cross-section of the cube by ``cutting'' it across a dimension at a given value. For example, slicing the cube in Fig. \ref{fig:cube_model} along \textit{Date} at value ``Date 1'' produces the sub-cube that contains all the points in the front face. The \textit{dice} operator is similar to slicing, but it selects a sub-cube along two or more dimensions.
+    \item \textbf{Roll-up} and \textbf{drill-down}: \textit{roll-up} (also called \textit{drill-up}) summarizes data at different levels of detail, either by reducing dimensions or by climbing dimension hierarchies. If \textit{roll-up} is used on the cube in figure \ref{fig:cube_model} on the \textit{Date} dimension, the result is a cube with only two dimensions \textit{Product} and \textit{Store}, where each point contains the \textit{Qty} value aggregated over all date values. The equivalent in SQL is a \textit{group by} done on all other dimensions not involved in the operator. \textit{Drill-down} does the reverse operation, producing more detailed data by adding dimensions or stepping down a dimensional attribute hierarchy. A cube that is rolled-up along all dimensions is called \textbf{apex cube} (or 0-dimensional cube).
+    \item \textbf{Drill-through}: this operator produces the facts that satisfy a given condition, reported in the form of a relational table.
+    \item \textbf{Pivot}: the \textit{pivot} (or \textit{rotate}) operator changes the presentation of the data cube by rotating the axes. It does not affect the actual data stored in the points.
+\end{itemize}
+The textual notation used in the data cube model is the following:
+\begin{itemize}
+    \item [-] \texttt{Sales(Store, Product, Date)} is the cube with dimensions \textit{Store}, \textit{Product}, and \textit{Date}, and some measure(s).
+    \item [-] \texttt{Sales(Store, Product, 'D1')} is a slice of the cube at \textit{Date} = 'D1'.
+    \item [-] \texttt{Sales(Store, 'P1', 'D1')} is a dice of the cube at \textit{Product} = 'P1' and \textit{Date} = 'D1'.
+    \item [-] \texttt{Sales(Store, Product, *)} is a roll-up on the \textit{Date} dimension, applying the sum aggregation function on the measure(s). The asterisk (*) indicates that the dimension is removed. \texttt{Sales(*,*,*)} produces the apex cube.
+    \item [-] \texttt{Sales(Store, 'P1', *)} is a combination of roll-up and slice: it slices the cube at \textit{Product} = 'P1' and rolls-up on the \textit{Date} dimension.
+\end{itemize}
+
+\section{The Extended Cube}
+
+A cube can be extended with borders made of cells containing th value of aggregate functions applied to the fact measures across each dimension, and combination of dimensions. In the previous example cube, it can be extended like in Fig. \ref{fig:cube_extended}. An extended cube can be seen as a generalization of extended cross-tabulations, where the additional cells contain the results of aggregation functions.
+\begin{figure}[h]
+    \centering
+    \includesvg[width=0.75\textwidth]{img/extended_cube.svg}
+    \caption{Example of an extended cube. The warm colored cells contain the result of aggregation along dimensions. The face in the back contains the apex cube in the top right corner.}
+    \label{fig:cube_extended}
+\end{figure}
+Whenever a dimension is used as coordinate instead of one of its values, the result is a \textbf{cuboid}. For example, \texttt{(Store, Product, *)} is the cuboid obtained by rolling-up by \textit{Date}. To speed up data analysis, data cube systems can pre-compute all or some cuboids and store them as \textbf{materialized views}. The total number of possible cuboids for a cube with $n$ dimensions is $2^n$; the total number of cells is
+\begin{equation*}
+    \sum_{i=1}^n (d_i + 1)
+\end{equation*}
+where $d_i$ is the number of values for the $i$-th dimension. An alternative way to indicare a cuboid is to omit the asterisk altogether: \texttt{(Sales, Product, *)} is equivalent to \texttt{(Sales, Product)}. \texttt{(Store, Product, Date)} denotes the whole data cube, while \texttt{()} denotes the (dimensionless) total sum of all sales.
+
+Cuboids can be represented as a \textbf{lattice}, which summarizes the partial order relations between them. We say that cuboid $C_1$ is below cuboid $C_2$ ($C_1 \preceq C_2$) if and only if $C_1$ can be computed from $C_2$. In general, the computation of $C_1$ from $C_2$ depends on the aggregate function used, which may be distributive, algebraic, or holistic.

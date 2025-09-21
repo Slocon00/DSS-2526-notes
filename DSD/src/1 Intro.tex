@@ -78,9 +78,9 @@ Data must be organized taking into account how managers will use it to support t
     
     Aggregation functions are classified in three categories:
     \begin{itemize}
-        \item \textbf{Distributive}: \textit{sum()}, \textit{count()}, \textit{max()}, \textit{min()}.
-        \item \textbf{Algebraic}: \textit{avg()}, \textit{stddev()}, \textit{var()}.
-        \item \textbf{Holistic}: \textit{median()}, \textit{mode()}, \textit{rank()}.
+        \item \textbf{Distributive}: \textit{sum()}, \textit{count()}, \textit{max()}, \textit{min()}. An aggregate function $f$ on a multiset $V$ is distributive if there is a local aggregate function $f_l$ and a global aggregate function $f_g$, such that for any $k$-partition $\{V_1, \ldots, V_k\}$ of $V$ we have $f(V) = f_g(\{f_l(V_1), \ldots, f_l(V_k)\})$.
+        \item \textbf{Algebraic}: \textit{avg()}, \textit{stddev()}, \textit{var()}. An aggregate function is algebraic if it can be computed using a finite algebraic expression defined over distributive functions.
+        \item \textbf{Holistic}: \textit{median()}, \textit{mode()}, \textit{rank()}. An aggregate function is holistic if it cannot be computed from other aggregate functions.
     \end{itemize}
     \item \textbf{Hierarchies}: managers are also interested in analyzing metrics at different levels of detail, by exploiting the fact that certain dimensions have a set of attributes that form a hierarchy (e.g., date can be broken down into year, semester, quarter, month, day).
 \end{itemize}
