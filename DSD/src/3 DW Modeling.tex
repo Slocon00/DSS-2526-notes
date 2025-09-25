@@ -31,13 +31,13 @@ Also measures can be classified in differen types:
     \caption{Graphical representation of facts.}
 \end{figure}
 
-\paragraph{Dimensions} Dimensions give facts a context. Graphically, they are represented by lines starting from the corresponding fact and ending with a circle. A dimension may also be described by a set of attributes, which are drawn as lines ending with a circle connected to the ``main'' circle of the dimension. Each attribute is also labeled with its unique name, and the same name should not be used for attributes of different dimensions.
+\paragraph{Dimensions} Dimensions give facts a context. Graphically, they are represented by lines starting from the corresponding fact and ending with a circle. A dimension may also be described by a set of attributes, which are drawn as lines ending with a circle connected to the ``main'' circle of the dimension. Each attribute is also labeled with its unique name, and the same name should not be used for attributes of different dimensions. A particular type of dimensional attribute are \textbf{descriptive attributes}: they are not directly used in aggregation, but are still included in the dimension table to keep track of useful information.
 
 In some cases, an interesting aspect to model is a hierarchical relationship between attributes. Using relational data model terminology, a \textbf{hierarchy} can be defined when there is a functional dependency between attributes: for example, if we define the dimension \textit{Date}, with attributes \textit{Day}, \textit{Month}, \textit{Year}, then we can define the hierarchy \textit{Day} $\rightarrow$ \textit{Month} $\rightarrow$ \textit{Year}. The same attribute may even appear in multiple hierarchical structures for the same dimension: if we also add the attribute \textit{Week}, then we can define \textit{Week} $\rightarrow$ \textit{Year} (this is because a week can overlap multiple months, so it does not belong to the previous dependency chain). Graphically, the attributes in the hierarchy are connected via directed edges that follow the direction of the functional dependency.
 
-Hierarchies may be \textbf{recursive}, when it involves the same dimension. For example, an \textit{employee} may have an assigned role that puts them in charge of other employees, as well as being managed by someone else; this relationship can be expressed via the \textit{supervisor} attribute, which allows the creation of a hierarchy of employees in a manager-subordinate relationship. Recursivity is represented by a crossed arrow that loops back in the same dimension.
+Hierarchies may be \textbf{recursive}, when it involves the same dimension. For example, an \textit{employee} may have an assigned role that puts them in charge of other employees, as well as being managed by someone else; this relationship can be expressed via the \textit{supervisor} attribute, which allows the creation of a hierarchy of employees in a manager-subordinate relationship. Recursivity is represented by a crossed arrow that loops back in the same dimension. Hierarchies can also be \textbf{ragged}, if one or more elements in the chain are optional. For example, an hierarchy can be built with the attributes \textit{City}, \textit{State}, and \textit{Country}. Since some cities may belong to countries without states, \textit{State} can be set as optional. Graphically, the optional attributes in a ragged hierarchy are crossed by a line. Attributes and hierarchies can be \textbf{shared} among multiple dimensions. These attributes are represented by a double circle, and their incoming arc are always directed (regardless of whether they belong to a hierarchy or not).
 
-A dimension may also be \textbf{multivalued}, if the same fact involves multiple instances of the same dimension. For example, a product order is managed by two agents, or a medical treatment involves multiple doctors. Multivalued dimensions are represented by a double arrow head exiting from the fact table. A dimension without attributes is called \textbf{degenerate}. They are simply represented by a line exiting the fact table and a singular circle at the end without any additional attributes. If a dimension is optional, it is represented by a dashed line.
+A dimension may also be \textbf{multivalued}, if the same fact involves multiple instances of the same dimension. For example, a product order is managed by two agents, or a medical treatment involves multiple doctors. Multivalued dimensions are represented by a double arrow head exiting from the fact table. A dimension without attributes is called \textbf{degenerate}. They are simply represented by a line exiting the fact table and a singular circle at the end without any additional attributes. If a dimension is \textbf{optional}, it is represented by a dashed line.
 
 Although not explicitly modeled at this level, the concept of changing over time is typically reported in the documentation, to be considered in the next phases. \textbf{Changing dimensions} are those dimensions whose attribute values may change over time. For example, a customer's address, phone number, or marital status; a student's enrollment status or major; a product's price or discount. There are four types of changing dimensions, the first three of which are \textbf{slowly changing dimensions}, and the last one being the \textbf{fast changing dimension}.
 \begin{itemize}
@@ -83,7 +83,7 @@ Schemas can follow three possible structures: \textbf{star schema}, \textbf{snow
     \caption{Example of a snowflake schema.}
 \end{figure}
 
-\paragraph{Constellation Schema} A constellation schema is obtained by fusing multiple schemas with one or more dimensions in common. The result is a schema with several fact tables that share dimension tables.
+\paragraph{Constellation Schema} A constellation schema is obtained by fusing multiple schemas with one or more dimensions in common, called \textbf{conformed dimensions}. The result is a schema with several fact tables that share a number of dimension tables.
 \begin{figure}[ht]
     \centering
     \includesvg[width=0.7\textwidth]{img/constellation_schema.svg}
@@ -227,7 +227,7 @@ A final aspect to consider is \textbf{multivalued dimensions}. There are four po
     \item Two auxiliary tables are used, with a middle one acting as a bridge table between the other and the dimension table (Fig. \ref{fig:multivalued_dimensions}d). The first table only stores one row per group, with a dedicated primary key, while the second one associates each entity of the dimension with a group. This solution is usually accepted by BI systems.
 \end{itemize}
 
-\begin{figure}[h]
+\begin{figure}[ht]
     \centering
     \includesvg[width=1.0\textwidth]{img/multivalued_dimensions.svg}
     \caption{Possible solutions for multivalued dimensions.}

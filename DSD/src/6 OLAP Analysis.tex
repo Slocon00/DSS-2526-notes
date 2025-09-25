@@ -26,6 +26,22 @@ This section is dedicated to reports, showing examples of how SQL can be used to
 \end{center}
 Attributes don't have any null value.
 
+\paragraph{Analytic SQL}
+The SQL has been extended to allow the use of several analytic functions, also known as Windows Functions, to facilitate the development of complex data analysis. A query has the following structure:
+\begin{lstlisting}[language=SQL, mathescape]
+    SELECT Select_attr ($S_A$), Select_agg_fun ($S_{AF}$), Analytic_fun ($A_F$) OVER (
+        [PARTITION BY <attr_list>]
+        [ORDER BY <sort_attr_list>] [window_clause])
+    FROM Fact_table ($F$) and Dimension_table (D)
+    WHERE Where_cond ($W_C$)
+    GROUP BY Grouping_attr ($G_A$)
+    HAVING Having_cond ($H_C$) with Agg_fun ($H_{AF}$)
+    ORDER BY Sort_attr ($O_A$);
+\end{lstlisting}
+A query written in analytic SQL is processed in this order: first, the operations in FROM, WHERE, GROUP BY, and HAVING clauses are performed; then, the analytic functions in the select are applied to the result of the previous step, producing a new result that adds new columns to the previous; finally, projection and sorting are applied to compute the final result.
+
+Analytic functions are used in the SELECT, with the \textbf{OVER} clause; they can either be applied to all the records, or separately to disjoint subsets obtained by partitioning the records by the value of an expression defined on the attributes of the record, using \textbf{PARTITION BY}. The partitioning operation is similar to that of a GROUP BY, but it does not output a single record for each group: instead, it produces as many records as it receives in input, extended with the new calculated attributes. If PARTITION BY is omitted, the set of records acts as a single group.
+
 \subsection{Simple Reports}
 Simple reports are obtained from simple SQL queries. For example, take the following business question: "What was the total revenue of sales for the month of January 2025, by brand and by product?". The SQL query to answer this question and produce the correct report is:
 \begin{lstlisting}[language=SQL]
@@ -147,3 +163,30 @@ the result will be $\{(\text{A, B, C}), (\text{A, B}), (\text{A})\}$, because A 
     GROUP BY A, CUBE(B, C)
 \end{lstlisting}
 the result will be $\{(\text{A, B, C}), (\text{A, B}), (\text{A, C}), (\text{A})\}$.
+
+\subsection{Moderately Difficult Reports}
+
+Some commonly requested reports cannot be expressed easily, as they require comparisons. An example is: ``What are the total revenues in 2025 by brand and by product, with the percentage change from the previous year?''. One way to write the corresponding SQL query is to write two separate queries, one for the year 2025 and one for 2024, which individually find the total revenues grouping by brand and product. Then, if the same products are sold in both years, the final result can be found performing a natural join of the two results; otherwise, a full join is required. To write the full query, there are two options: either the subqueries are written in the FROM clause, or they are specified before the main one using the WITH clause. Using WITH, the query is:
+\begin{lstlisting}[language=SQL, mathescape]
+    WITH    Revenue25 AS(
+            SELECT Brand, Product, SUM(Revenue) AS TotRevenue25 
+            FROM Sales
+            WHERE YEAR(Date) = 2025
+            GROUP BY Brand, Product
+            ),
+            Revenue24 AS(
+            SELECT Brand, Product, SUM(Revenue) AS TotRevenue25 
+            FROM Sales
+            WHERE YEAR(Date) = 2024
+            GROUP BY Brand, Product
+            )
+
+    SELECT Revenue25.Brand AS Brand, Revenue25.Product AS Product,
+    TotRevenue25, TotRevenue24,
+    ROUND(100*(TotRevenue25 $-$ TotRevenue24)/TotRevenue25) AS Delta
+    FROM Revenue24 FULL JOIN Revenue25 USING(Brand, Product)
+    ORDER BY Brand, Product;
+\end{lstlisting}
+For simplicity, we omitted the handling of cases where the total revenue for a given product is NULL is a year it was not sold in; it would need an additional CASE statement.
+
+Other business questions may require the use of OVER and PARTITION BY.
