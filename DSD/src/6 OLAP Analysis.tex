@@ -190,3 +190,43 @@ Some commonly requested reports cannot be expressed easily, as they require comp
 For simplicity, we omitted the handling of cases where the total revenue for a given product is NULL is a year it was not sold in; it would need an additional CASE statement.
 
 Other business questions may require the use of OVER and PARTITION BY.
+
+\subsection{Very Difficult Reports}
+
+An example of a business question that needs a very difficult report to be answered is: ``What are the top 5 best products sold in a given region?''. This example motivates the introduction of an additonal operator in analytic SQL, called RANK.
+
+\paragraph{RANK and DENSE\_RANK} The RANK function is used to sort the records in a set based on the value of an attribute or an expression (i.e., an aggregate function), assigning a position in a ranking to each record. The rank of a value is defined as 1 plus the number of other values that strictly precede it. If $k > 1$ values are equal, they are assigned the same rank, and the rank assigned to the next value is also increased by that $k$. For example, if the values are $(1, 2, 2, 3)$, their ranks are $(1, 2, 2, 4)$. The standard order is ascending, meaning that rank 1 is associated with the record with. the lowest value, but the ordering can be reversed. This function is specified in the SELECT clause as follows:
+\begin{lstlisting}[language=SQL]
+    <RankFun>()
+    OVER ( [PARTITION BY <attr_list>]
+        ORDER BY <sort_attr_list> ) [AS Ide]
+\end{lstlisting}
+Partitioning is optional. If it is omitted, all records are assumed to be part of the same partition set, so that each record is assigned a unique rank. If partitioning is used, ranking is done by grouping by the specified records and only within each group. The ORDER BY is mandatory, since ranking also requires the data to be sorted beforehand. DENSE\_RANK is a variant of RANK where the rank of a value is defined as 1 plus the number of distinct values that strictly precede it. Using the previous example, the values $(1, 2, 2, 3)$ would have ranks $(1, 2, 2, 3)$. If the collection of values contains no duplicates, RANK and DENSE\_RANK produce the same result. Other related functions include:
+\begin{itemize}
+    \item \textbf{PERCENT\_RANK}: defined as RANK - 1 divided by number of rows -1. It's a normalized version of RANK, since it always produces values in the range $[0, 1]$.
+    \item \textbf{ROW\_NUMBER}: simply returns a sequential number for each record, starting from 1. 
+    \item \textbf{CUME\_DIST}: it returns a value between 0 and 1 to each record according to the number of records lower than or equal to it. In other words, it calculates the empirical cumulative distribution of the values in the collection. Equal values are assigned to the same number.
+    \item \textbf{NTILE($n$)}: returns the $n$-tile of the collection of records, i.e., a partition of $n$ groups each with the same number of records as the others (eventually plus or minus one if a perfect split is not possible), assigning to each record the number of the corresponding group.
+\end{itemize}
+
+\paragraph{LAG and LEAD} The LAG and LEAD functions are used to access data from rows that come before or after the current row in the result set, respectively. The syntax is:
+\begin{lstlisting}[language=SQL]
+    LAG(<attr>, <offset>, <default>)
+    LEAD(<attr>, <offset>, <default>)
+\end{lstlisting}
+The first argument is the attribute from which the value is retrieved from. The second argument is the number of rows to skip above or below. The last argument is a default value to be used if the stored value in the specified row is empty (e.g., if the offset is larger than the number of rows available). Only the first argument is mandatory; the offset is otherwise set to 1, and the default is set to NULL.
+
+\paragraph{Window Functions} Windows are used to make calculations that take into account a set of rows related to the current one. They can be used to compute cumulative, moving, and centered aggregates. The window size can be determined in a physical way with the \textbf{ROWS} option, or in a logical way using the \textbf{RANGE} option. Commonly, windows are defined over the date attribute. The window can include all records in the set on which it is defined, or only the current record. For example, to calculate a cumulative sum, the first record is fixed and the end of the window moves from first to last record. A moving average requires both window extremes to move. The syntax used to define a window is:
+\begin{lstlisting}[language=SQL]
+    <agg_fun>(<expr>)
+    OVER (
+        [PARTITION BY <attr_list>]
+        [ORDER BY <sort_attr_list> [<ROWS or RANGE> <window_clause>]]
+    ) [AS Ide]
+\end{lstlisting}
+Examples of window specifications are:
+\begin{itemize}
+    \item \textbf{ROWS UNBOUNDED PRECEDING}. The window begins with the first record of the partition and ends with the current record.
+    \item \textbf{ROWS BETWEEN 5 PRECEDING AND 5 FOLLOWING}. The window includes all records that are within 5 rows before and after the current record.
+    \item \textbf{RANGE BETWEEN INTERVAL 5 DAYS PRECEDING AND CURRENT ROW} (the date attribute is used). The window includes all records whose data falls within 5 days before the date of the current one.
+\end{itemize}
