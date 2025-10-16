@@ -2,7 +2,7 @@
 
 This chapter introduces the multidimensional (data) cube model, another logical model used in data warehousing to analyze data in aggregated form in an intuitive way. A multidimensional cube model represents facts with $n$ dimensions as points in an $n$-dimensional space; a point is identified by the values of dimensions, and has an associated set of measures. An example of a 3-dimensional cube is shown if Fig. \ref{fig:cube_model}. The following sections will describe the main operations that can be performed on cubes.
 
-\begin{figure}[h]
+\begin{figure}[ht]
     \centering
     \includesvg[width=1.0\textwidth]{img/cube_model.svg}
     \caption{Example of a 3-dimensional cube. \textit{Product}, \textit{Date}, and \textit{Store} are dimensions, while \textit{Qty} is a measure of a fact.}
@@ -30,7 +30,7 @@ The textual notation used in the data cube model is the following:
 \section{The Extended Cube}
 
 A cube can be extended with borders made of cells containing th value of aggregate functions applied to the fact measures across each dimension, and combination of dimensions. In the previous example cube, it can be extended like in Fig. \ref{fig:cube_extended}. An extended cube can be seen as a generalization of extended cross-tabulations, where the additional cells contain the results of aggregation functions.
-\begin{figure}[h]
+\begin{figure}[ht]
     \centering
     \includesvg[width=0.75\textwidth]{img/extended_cube.svg}
     \caption{Example of an extended cube. The warm colored cells contain the result of aggregation along dimensions. The face in the back contains the apex cube in the top right corner.}

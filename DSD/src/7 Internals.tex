@@ -1,0 +1,145 @@
+\chapter{DBMS and Data Warehouse Systems Internals}
+
+This chapter discusses some basic mechanisms on which DBMSs and Data Warehouse Systems are built, focusing on physical plans, indexing, and query optimization.
+
+\section{DBMS Query Processing}
+
+Data in DBMSs can be stored in different ways, depending on what requirements the system must satisfy and the characteristics of the data itself. A simple storage method is the \textbf{heap file}, where each table occupies a file, and tuples are stored in the order in which they are inserted. For simplicity, we will assume this solution. Each record is identified by an internal \textbf{record identifier} (\textbf{RID}), which also uniquely identifies the disk address at which the page containing the record is stored.
+
+DBMSs have architectures that include several components with specific roles. Among them, the \textbf{query optimizer} has the task of transforming user queries into equivalent but more efficient forms using a series of rules and heuristics. Physical query plans can be represented as trees, similarly to logical plans, where each node is a physical operator. Such operators are implementations of logical operators, and multiple physical operators can implement the same logical operator.
+
+Each operator is (typically) implemented as an iterator using a ``pull'' interface: when an operator is asked for the next tuple, it also ``pulls'' a tuple from each of its children, processes them, and returns it to its parent. The interface has a few methods, including \textit{open()}, \textit{next()}, \textit{isDone()}, and \textit{close()}. The following is a list of some common physical operators:
+\begin{itemize}
+    \item \textbf{TableScan}$(R)$: scans the table $R$ and returns its tuples.
+    \item \textbf{SortScan}($R, \{A_i\}$): scans $R$ and returns its tuples sorted by the attributes $\{A_i\}$.
+    \item \textbf{Sort}($O, \{A_i\}$): sorts the tuples of operand $O$ on the attributes $\{A_i\}$. A TableScan followed by a Sort is equivalent to a SortScan.
+    \item \textbf{Project}($O, \{A_i\}$): projects the records of operand $O$, without duplicate elimination.
+    \item \textbf{Distinct}($O$): eliminates duplicates from the records of operand $O$. The records must be sorted beforehand.
+    \item \textbf{HashDistinct}($O$): also eliminates duplicates, but uses a hash table and does not require sorting.
+    \item \textbf{Filter}($O, \psi$): selects the records of $O$ that satisfy the predicate $\psi$.
+    \item \textbf{IndexFilter}($R, I, \psi$): selects the records of $O$ using the index $I$ defined on the attributes involved in $\psi$.
+    \item \textbf{RidIndexFilter}($I, \psi$) and \textbf{TableAccess}($O,R$): the first retrieves the RIDs associated to values that satisfy the predicate $\psi$ in the index $I$; the second retrieves the records in $R$ using the RIDs in $O$. An IndexFilter is equivalent to a RidIndexFilter followed by a TableAccess.
+    \item \textbf{NestedLoop}($O_E, O_I, \psi_J$): joins the tuples of $O_E$ and $O_I$ using a nested loop. For each tuple in $O_E$, it iterates over $O_I$ to find all matching tuples, adding them to the result.
+    \item \textbf{IndexNestedLoop}($O_E, O_I, \psi_J$): joins the two relations using an index defined on the join attribute of $O_I$. It is also implemented as a nested loop, but the inner one uses the index to directly retrieve the matching tuples instead of scanning all of $O_I$. The inner operand $O_I$ must be an IndexFilter (or Filter + IndexFilter) which uses the index on the join attribute to read the table.
+    \item \textbf{GroupBy}($O, \{A_i\}, \{f_i\}$): groups the records of $O$ on the attributes $\{A_i\}$, applying the aggregation functions $\{f_i\}$. The records of $O$ must be sorted on $\{A_i\}$ beforehand.
+    \item \textbf{HashGroupBy}($O, \{A_i\}, \{f_i\}$): a variant of GroupBy that uses a hash table and does not require sorting.
+\end{itemize}
+
+\section{Indexes}
+
+To speed up data access, \textbf{indexes} can be defined on a table's attributes. If a query has a selection condition on an indexed attribute, the index can be used to quickly find the RIDs of the relevant records without scanning the entire table. An index is formally defined as follows:
+\BoxDef{Index}{
+    Let $R$ be a table of records with an attribute $A$. An \textbf{index} \textit{I} on \textit{A} is a sorted table $I(A,RID)$ on $A$, with $N_{rec}(I) = N_{rec}(R)$. A tuple of \textit{I} is a pair $(A := a_i, RID := r_i)$, where $a_i$ is a value of $A$ for some record in $R$, and $r_i$ is the RID of that record. 
+}
+An index can be defined on any set of attributes of a table. If the index is defined on two or more attributes, it is called a \textbf{composite index}.
+
+There are multiple implementations of indexes, of which the most common are inverted indexes, bitmaps, and join indexes. 
+\BoxDef{Inverted Index}{
+    An \textbf{inverted index} $I$ on a non-key attribute $A$ of a table $R$ is a sorted collection of entries in the form $(a_1, n, p_1, p_2, \ldots, p_n)$, where each value $a_i$ of $A$ is followed by the number of records $n$ with that value, and the list of sorted RIDs for those records.
+}
+When the number of distinct values of an indexed attribute is small (we say that the attribute is \textbf{not selective}), the inverted lists become very long, making the index inefficient.
+\BoxDef{Bitmap Index}{
+    A \textbf{bitmap index} $I$ on a non-key attribute $A$ of a table $R$ with $N$ records is a sorted collection of entries in the form $(a_i, B)$, where each value $a_i$ of $A$ is followed by $N$ bits, where the $j^{\textit{th}}$ bit is 1 if the $j^{\textit{th}}$ record of $R$ has value $a_i$ for attribute $A$, and 0 otherwise.
+}
+An advantage of bitmaps is that they allow binary operations (AND, OR, XOR, NOT) that can be used to efficiently evaluate certain queries with multiple conditions and with counting (e.g., ``how many records have $A=a_1$ AND $B=b_2$?''). Despite apparently wasting a lot of space, bitmap indexes can be easily compressed. This option is favored when the attribute is not selective as an alternative to inverted indexes.
+
+A special type of index is the join index, which is not normally used in operational databases due to the overhead of updating it. The (star) join index is used to efficiently evaluate star queries in data warehouses.
+\BoxDef{Star Join Index}{
+    Let $F$ be a fact table and $D$ a dimension table. A \textbf{star join index} $I$ is a set of ordered pairs in the form $(d,f)$, where $d$ is a RID of a record $r_d$ in $D$ and $f$ is a RID of a record $r_f$ in $F$ such that $r_d.\textit{Pk} = r_f.\textit{Fk}$.
+}
+A star join index can be defined in such a way that each unique RID $d$ in $D$ is paired with a bitmap of RIDs in $F$ that match it. This variant is called \textbf{bitmapped join index}. \\
+While a traditional index maps an attribute value of a table to the RIDs of records with that value, a \textbf{foreign column join index} (\textbf{FCJI}) maps an attribute value from a dimension table to the records in the fact table joining with the dimension table records with that value. Using FCJIs can potentially eliminate the need to join the tables, since dimensional attribute values are already found in the index. FCJIs can also be bitmapped.
+
+\section{Table Partitioning}
+
+As mentioned above, the simplest way to store tables is using heap files, where each file contains a table, with tuples stored in the order they were inserted. When this solution is used, each time the table is accessed, a full scan of the heap file is necessary, since we cannot make any assumption about the order of the tuples to use specific search algorithms. For data warehouses, a solution is to use \textbf{horizontal partitioning}, where the table is divided into groups of tuples that satisfy some multi-way condition:
+\begin{itemize}
+    \item \textbf{Range partitioning} is a condition based on membership to a range of values of an attribute. For example, the rows in a fact table could be partitioned based on the month of the year by using ranges of dates that define each month.
+    \item \textbf{List partitioning} is a condition base on membership to a list of values. For example, the rows in a fact table can be partitioned based on the country, where each partition contains the rows for a specific country.
+\end{itemize}
+Other methods include hash partitioning, composite partitioning, interval partitioning; different DBMSs support different methods. The advantages of table partitioning are faster data access, increased scalability, availability/load improvement (as partitions can be managed individually). Partitioning can also be applied to indexes.
+
+\section{Materialized Views}
+
+Views are tables derived from queries computed over base relations, which can be used to simplify complex queries. Materialized views are views whose result is stored in the database, allowing it to be reused without recomputing it each time. This is especially useful for queries that require grouping and/or aggregation, which can be expensive to compute. The use of views introduces three main problems:
+\begin{itemize}
+    \item Knowing the query workload (i.e., type and frequency of queries executed), which views should be materialized? 
+    \item How does the system use materialized views to \textbf{rewrite} a query in a semantically equivalent but more efficient version?
+    \item How should materialized views be updated when the base relations change?
+\end{itemize}
+This section will focus on the first problem, while the second one will be tackled in a later chapter. For the third problem, two types of solution have been studied: \textbf{immediate/incremental update}, which causes the views to be recomputed each time the reference tables are updated, and \textbf{deferred update}, where changes to reference tables are stored in a log file, and views are then updated according to one of the following ways:
+\begin{itemize}
+    \item Lazy update: happens when the view is used;
+    \item Periodic update after a certain time interval;
+    \item Update happens after a fixed number of updates have been applied to the reference tables.
+\end{itemize}
+In data warehouses, deferred updates are preferred, since even though views may temporarily lose alignment with the base data, the very nature of the data stored in the data warehouse mitigates the issue.
+
+\subsection{How to Choose Views}
+
+Let us consider a fact table with three dimensions and on measure $m$, without dimensional attributes. Business questions can be answered grouping data over one or more dimensions and aggregating the value of $m$. With three dimensions, the number of possible views we can generate to solve the business questions is $2^3 = 8$, and such views can be partially ordered in the data warehouse lattice (in Fig \ref{fig:lattice}). The root node represents the fact table. Views in higher lattice levels have more grouping attributes and are more detailed than those in lower levels, which are more specialized. This lattice has an important property: if a node view has been materialized, then it can be used to compute the result of any query that groups only by a subset of the view attributes.
+\begin{figure}[ht]
+    \centering
+    \includesvg[width=0.5\textwidth]{img/lattice.svg}
+    \caption{Data Warehouse lattice with three dimensions.}
+    \label{fig:lattice}
+\end{figure}
+There are three possibilities for materialization:
+\begin{itemize}
+    \item \textbf{Materialize nothing}: only store the root node (the fact table). The result of each query can be computed from this data at a cost that depends on the fact table size.
+    \item \textbf{Materialize all the views}: the result of any possible grouping query is precomputed and stored, optimizing query response times at the expense of increased storage space usage.
+    \item \textbf{Materialize some views}: an appropriate subset of views to materialize is chosen to facilitate the execution of all queries.
+\end{itemize}
+We will consider the last approach.
+
+Each node in the lattice can be paired with its \textbf{view size}, which is measured in terms of the number of tuples in the view and is derived from some estimation algorithm (using an analytic approach, sampling approach, or Pareto model approach). The queries considered in the workload are the same ones corresponding to the nodes in the lattice. Queries are also paired with an \textbf{execution cost}: the cost of executing $q$ using the view $v$ is $|v|$, i.e., the number of (real or estimated) tuples in the view. We can now formally define the problem of choosing views to materialize.
+
+Let $Q$ be the query workload, $M$ be a set of materialized views, and $C(q,M)$ the execution cost of query $q \in Q$ using the best (w.r.t. $q$) view in $M$. The goal is to select the set of views $M$ that minimizes the overall execution cost of the query workload $Q$, which is the following quantity:
+\begin{equation*}
+    \tau(M) = \sum_{q \in Q} C(q, M)
+\end{equation*}
+This optimization problem has been proven to be NP-complete, so heuristics are used to find approximate solutions.
+
+\paragraph{Harinarayan-Rajaraman-Ullman (HRU)} HRU is an iterative algorithm that calculates a quantity called \textbf{benefit} to choose which view to materialize. Initially, $M = \{F\}$, i.e., only the fact table is materialized. The benefit of a view not yet materialized $v$ is the reduction in execution cost of the workload if the view is added to $M$:
+\begin{equation*}
+    B(v,M) = \tau(M) - \tau(M \cup \{v\}) = \sum_{q \in Q} (C(q,M) - C(q, M \cup \{v\}))
+\end{equation*}
+Consider a query $q \in Q$:
+\begin{itemize}
+    \item If $q \not \preceq v$:
+    \begin{equation*}
+        C(q, M \cup \{v\}) = C(q,M)
+    \end{equation*}
+    hence, the benefit of $v$ for $q$ is 0.
+    \item If $q \preceq v$, let $u_q$ be the view with the least cost in $M$ such that $q \preceq u_q$ (i.e., $|u_q| = C(q,M)$). Then:
+    \begin{equation*}
+        C(q, M \cup \{v\}) = \min\{|v|, |u_q|\}
+    \end{equation*}
+    since either $v$ is better than $u_q$, or vice versa. Then, if $v$ is better for the query ($|v| < |u_q|$), then $C(q,M) - C(q, M \cup \{v\}) = |u_q| - |v| > 0$. If $v$ is not better than $u_q$, its addition to $M$ does not improve the query cost, and $C(q,M) - C(q, M \cup \{v\}) = |u_q| - |v| = 0$. In general, we can write
+    \begin{equation*}
+        C(q, M) - C(q, M \cup \{v\}) = \max\{0, |u_q|-|v|\}
+    \end{equation*}
+\end{itemize}
+In summary, the benefit of $v$ can be rewritten as:
+\begin{equation*}
+    B(v,M) = \sum_{q \preceq v} \max\{0, |u_q| - |v|\}
+\end{equation*}
+The HRU algorithm follows the steps in \Cref{alg:hru}.
+\begin{algorithm}[h]
+\caption{HRU.}
+\begin{algorithmic}[H]
+    \State $M \gets \{v_1\}$
+    \State $N \gets V - M$
+    \For{$i=1$ to $k$}
+        \State $v =$ the view in $N$ that maximizes $B(v,M)$
+        \State $M = M \cup \{v\}$
+        \State $N = N - \{v\}$
+    \EndFor
+    \State \Return $M$
+\end{algorithmic}
+\label{alg:hru}
+\end{algorithm}
+Since it is a greedy algorithm, there is no guarantee that it will find the optimal solution. Still, the authors have shown that it provides good results in practice, and that the following property holds:
+\BoxDef{}{
+    For each lattice, let $B_{\textit{greedy}}$ be the benefit of $k$ views selected by the greedy algorithm, and $B_{\textit{opt}}$ be the benefit of the optimum choice of $k$ views. Then, $B_{\textit{greedy}}$ can never be less than $0.63 \times B_{\textit{opt}}$.
+}

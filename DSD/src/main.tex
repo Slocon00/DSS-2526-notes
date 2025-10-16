@@ -8,6 +8,8 @@
 \usepackage{amsmath}
 \usepackage{imakeidx}
 \usepackage{hyperref}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
 \usepackage{listings}
 \lstset{basicstyle=\footnotesize, columns=fullflexible}
 
@@ -39,6 +41,8 @@
 
 \titleformat{\paragraph}[runin]{\normalfont\normalsize\bfseries\color{Maroon}}{}{0em}{}
 
+\usepackage{cleveref}
+
 \makeindex
 
 \begin{document}
@@ -66,8 +70,7 @@
 \input{4 CRM.tex}
 \input{5 Cube.tex}
 \input{6 OLAP Analysis.tex}
-
-\printindex
+\input{7 Internals.tex}
 
 \nocite{*}
 \bibliographystyle{plain}
