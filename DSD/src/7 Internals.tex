@@ -167,3 +167,148 @@ Since it is a greedy algorithm, there is no guarantee that it will find the opti
 \paragraph{Algorithm for Dimensional Attributes} The presence of dimensional attributes increases the number of potential groupings, and therefore the number of nodes in the lattice. However, since the dimensional attributes are functionally dependent on the key of the corresponding dimension table, some nodes are redundant: for example, if a dimension table has the key $K$ and a dimensional attribute $A$, the grouping on $(K)$ produces the same result as the grouping on $(K,A)$.
 
 The same reasoning can be applied if attributes belong to hierarchies. For example, given the hierarchy $A \rightarrow B$, grouping by $A$ produces the same result as grouping by $(A,B)$.
+
+\section{Query Optimization in Data Warehouses}
+
+Query plan optimization in data warehouses is mostly focused on optimizing the execution of the GROUP BY operator, and on using materialized views when appropriate. This section will illustrate a series of cases in which the logical plan can be transformed, along with the conditions under which the transformation is valid.
+
+\paragraph{Functional Dependencies} Before showing actual rewrite options, this paragraph will introduce some definitions and properties of functional dependencies relevant to query optimization.
+\BoxDef{Functional Dependency}{
+    Given a relation schema $R$ and $X,Y$ subsets of attributes of $R$, a functional dependency $X \rightarrow Y$ is a constraint that specifies that for every possible instance $r$ of $R$ and for any two tuples $t_1, t_2 \in r$, $t_1[X] = t_2[X]$ implies $t_1[Y] = t_2[Y]$.
+}
+\BoxDef{Logical Implication}{
+    Given a set $F$ of functional dependencies on a relation schema $R$, another functional dependency $X \rightarrow Y$ is \textbf{logically implied} by $F$ if every instance of $R$ that satisfies $F$ also satisfies $X \rightarrow Y$:
+    \begin{equation*}
+        F \vdash X \rightarrow Y
+    \end{equation*}
+}
+This property holds if $X \rightarrow Y$ can be derived by $F$ using the following set of inference rules, called \textbf{Armstrong's axioms}:
+\begin{align*}
+    &\text{If } Y \subseteq X \text{ then } X \rightarrow Y &\textit{(Reflexivity)} \\
+    &\text{If } X \rightarrow Y, Z \subseteq Y, \text{ then } XZ \rightarrow YZ &\textit{(Augmentation)} \\
+    &\text{If } X \rightarrow Y, Y \rightarrow Z, \text{ then } X \rightarrow Z &\textit{(Transitivity)}
+\end{align*}
+\BoxDef{Closure of a Functional Dependecies Set}{
+    Given a schema $R <T,F>$, the \textbf{closure} of $F$, denoted by $F^+$, is:
+    \begin{equation*}
+        F^+ = \{ X \rightarrow Y | F \vdash X \rightarrow Y \}
+    \end{equation*}
+}
+\BoxDef{Closure of an Attribute Set}{
+    Given a schema $R <T,F>$ and $X \subseteq T$, the \textbf{closure} of $X$, denoted by $X^+$, is:
+    \begin{equation*}
+        X^+ = \{ A_i \in T | F \vdash X \rightarrow A_i \}
+    \end{equation*}
+}
+The \textbf{implication problem} consists in testing whether a given functional dependency belongs to the closure of a set without explicitly computing the whole closure. A procedure to solve the problem follows from the theorem below:
+\BoxDef{Theorem}{
+    $F \vdash X \rightarrow Y$ iff $Y \subseteq X^+$.
+}
+A simple algorithm (faster ones exist) based on this theorem is the following:
+\begin{algorithm}[h]
+\caption{SlowClosure.}
+\begin{algorithmic}
+    \State \textbf{input}: $R<T,F>$, $X \subseteq T$
+    \State \textbf{output}: $X^+$
+    \State $X^+ = X$
+    \While{changes happen to $X^+$}
+        \For{$W \rightarrow V \in F$ with $W \subseteq X^+$ and $X \not \subseteq X^+$}
+            \State $X^+ = X^+ \cup V$
+        \EndFor
+    \EndWhile
+\end{algorithmic}
+\end{algorithm}
+
+We assume tables do not have any null value, and all have primary keys; a key constraint uniquely identifies each record in a table, such that tables are guaranteed to be sets of tuples instead of multisets. We also assume that queries are a single SELECT with possibly a GROUP BY and HAVING, but no subselections and ORDER BY. We can now give a definition of key:
+\BoxDef{Key}{
+    Given a schema $R <T,F>$, we say that $W \subseteq T$ is a \textbf{key} of $R$ if
+    \begin{align*}
+        &W \rightarrow T \in F^+ &(W \text{ is a superkey}) \\
+        &\forall V \subset W . V \rightarrow T \not \in F^+ &(\text{if } V \subset W, V \text{ is not a superkey})
+    \end{align*}
+}
+According to the assumptions above, since superkeys are lifted after a join and a restriction, the result of that sequence of operators is also a set of tuples.
+
+Now, suppose we want to find which functional dependencies hold in the result of a query in the form SELECT * FROM - WHERE, in which all the tables in the FROM clause have a key. A possible algorithm is:
+\begin{enumerate}[noitemsep]
+    \item Let $F$ be the initial set of functional dependencies, whose determinants (left side) are the keys of all tables used in the query.
+    \item Let $C$ be the WHERE condition. If a conjunct in $C$ is a predicate in the form $A_i = c$, then $F$ is extended with the functional dependency $\{\} \rightarrow A_i$.
+    \item If a conjunct in $C$ is a predicate $A_j = A_k$ (for example, a join condition), $F$ is extended with two new functional dependencies $A_j \rightarrow A_k$ and $A_k \rightarrow A_j$. 
+\end{enumerate}
+We can also build an algorithm that computes the closure of an attribute set over the result of a join followed by a selection ($\sigma_{phi}(R \bowtie S)$), which does not explicitly use functional dependencies and works directly in SQL:
+\begin{enumerate}[noitemsep]
+    \item Let $X^+ = X$.
+    \item Add to $X^+$ all attributes $A_i$ such that $A_i = c$ is a conjunct in the selection.
+    \item Repeating until $X^+$ does not change:
+    \begin{enumerate}[noitemsep]
+        \item Add to $X^+$ all attributes $A_j$ such that predicate $A_j = A_k$ is a conjunct in the selection, and $A_k \in X^+$.
+        \item Add to $X^+$ all attributes in a table if $X^+$ contains the key of that table.
+    \end{enumerate}
+\end{enumerate}
+
+
+\paragraph{Functional Dependencies and Groupings} Let $A$ and $B$ be two attributes of a relation $R$, such that $A \rightarrow B$. This functional dependency implies that grouping over $(A,B)$ produces the same groups as grouping over $(A)$:
+\begin{align*}
+    &_X \gamma_F (E) \equiv _{X \cup \{B\}}\gamma_F (E) &\text{for }B \not \in X, \quad X \rightarrow B
+\end{align*}
+
+\paragraph{Anticipating HAVING} This transformation anticipates the application of the selection operator corresponding to the HAVING clause before the GROUP BY operator:
+\begin{equation*}
+    \sigma_{\phi}(_X \gamma_F (E)) \equiv _X \gamma_F (\sigma_{\phi}(E))
+\end{equation*}
+This transformation can be applied if:
+\begin{enumerate}[noitemsep]
+    \item the condition $\phi$ only depends on $X$, i.e., $\phi = \phi_X$. The query becomes equivalent to one in which the selection is moved to the WHERE clause;
+    \item the condition $\phi$ depends on the result of the aggregation function(s); rewriting is possible only in two cases:
+    \begin{align*}
+        &\sigma_{\textit{Mb} \geq v}(_X \gamma_{\textit{MAX}(b) AS _\textit{{Mb}}}(E)) \equiv _X \gamma_{\textit{MAX}(b) AS _\textit{{Mb}}}(\sigma_{b \geq v}(E)) \\
+        &\sigma_{\textit{mb} \leq v} (_X\gamma_{\textit{MIN}(b) AS _{\textit{mb}}} (E)) \equiv _X\gamma_{\textit{MIN}(b) AS _{\textit{mb}}}(\sigma_{b \leq v}(E)) 
+    \end{align*}
+    i.e., when the condition selects elements based on the maximum or minimum value of an attribute. More specifically, the condition for the maximum is $\textit{Mb} \geq v$, while for the minimum it is $\textit{mb} \leq v$, since these are the only cases where filtering before does not eliminate useful tuples.
+\end{enumerate}
+
+\paragraph{Pre-grouping} The standard way to evaluate queries with a grouping and a join is to first compute the join, and then group the result. However, it may be possible to pre-group, i.e., group the relations first to reduce the number of tuples involved in the join. This can happen in three cases:
+\begin{itemize}
+    \item \textbf{Invariant grouping}: let $R$ and $S$ be the joined relations, and let $R \underset{C_j}{\bowtie} S$ be an equi-join using the primary key $p_k$ on $S$ and the foreign key $f_k$ of $R$. Let $A(\alpha)$ be the set of attributes of a relation $\alpha$. A relation $R$ has the invariant grouping property:
+    \begin{equation*}
+        _X \gamma_F(R \underset{C_j}{\bowtie} S) \equiv \pi^b_{X \cup F} ((_{X \cup A(C_j) - A(S)} \gamma_F (R)) \underset{C_j}{\bowtie} S)
+    \end{equation*}
+    if the following conditions are true:
+    \begin{enumerate}[noitemsep]
+        \item $X \rightarrow f_k$, i.e., the foreign key of $R$ is functionally determined by the grouping attributes $X$;
+        \item Each aggregate function in $F$ uses only attributes of $R$.
+    \end{enumerate}
+    \item \textbf{Double grouping}: in some cases, the GROUP BY can be moved before the join on one of the relations, but then an additional GROUP BY is required to compute the final aggregations. This staged aggregation requires that all the aggregate functions are decomposable. An aggregate function $f$ is called \textbf{decomposable} if there is a local aggregate function $f_l$ and a global aggregate function $f_g$, such that for each multiset $V$ and any partition of it $\{V_1, V_2\}$, it holds that:
+    \begin{equation*}
+        f(V_1 \cup V_2) = f_g(\{f_l(V_1), f_l(V_2)\})
+    \end{equation*}
+    examples of decomposable functions are MIN (MIN + MIN), MAX (MAX + MAX), SUM(SUM + SUM), and COUNT (SUM + COUNT). AVG is not decomposable, but it can be derived from the ratio between SUM and COUNT.
+
+    In $_X \gamma_F (R \underset{C_j}{\bowtie} S)$, $R$ has the \textbf{early partial aggregation property} if all aggregate functions are decomposable and only use attributes of $R$. If $R$ does not have the invariant grouping property because condition 1 does not hold, but is has the early partial aggregation property, then:
+    \begin{equation*}
+        _X \gamma_F (R \underset{C_j}{\bowtie} S) \equiv _X \gamma_{F_g} (({_X \cup A(C_j) - A(S)} \gamma_{F_l} (R))\underset{C_j}{\bowtie} (S))
+    \end{equation*}
+    i.e., the data is grouped once with the local aggregate function on $R$, and a second time over the result of the join with the global aggregate function.
+    \item \textbf{Grouping and counting}: when neither the invariant grouping property or partial aggregation property hold, the GROUP BY can still be moved below the join if it is possible to derive the aggregate function values from the number of elements in the partitions generated by the moved GROUP BY. $SUM(T)$ applied to a bag of repeated values $T$ (i.e., $T = \{v, v, \ldots, v\}$) with $n$ elements has the following property:
+    \begin{gather*}
+        SUM(T) = v * n \\
+        MIN(T) = v \\
+        MAX(T) = v \\
+        AVG(T) = v \\
+        COUNT(T) = n
+    \end{gather*}
+    We can then exploit the following equivalence rule; let $B \not \in X$ and $X \rightarrow B$, then:
+    \begin{equation*}
+        _X \gamma_{SUM(B) \textit{AS SB}}(E) \quad \equiv \quad \pi^b_{X \cup \{ B \times \textit{GBcount AS SB}\}}(_{X \cup \{ B \}} \gamma_{\textit{COUNT(*) AS GBcount}}(E))
+    \end{equation*}
+    If this is applied to the join, we get, given decomposable aggregate functions in $G \subseteq F$ that use attributes of $S$:
+    \begin{equation*}
+        _X \gamma_F (R \underset{C_j}{\bowtie} S) \quad \equiv \quad \pi^b_{X \cup (F - G) \cup Z} ((_{X \cup A(C_j) - A(S)} \gamma_{(F-G) \cup \{\textit{COUNT(*) AS GBcount}\}}(R)) \underset{C_j}{\bowtie} (S))
+    \end{equation*}
+    where $Z$ is a set of expressions such that:
+    \begin{itemize}[noitemsep]
+        \item $A_i \times \textit{GBcount} \in Z$ if $f(A_i) \in G$ is $SUM(A_i)$;
+        \item \sloppy $Ide_j \in Z$ if $f(A_i) \in G$ is $\textit{MIN}(A_i) \ AS \ Ide_j$, or $\textit{MAX}(A_i) \ AS \ Ide_j$, or $\textit{AVG}(A_i) \ AS \ Ide_j$;
+        \item $\textit{GBcount} AS Ide_j \in Z$ if $f(A_i) \in G$ is $\textit{COUNT}(A_i) AS Ide_j$.
+    \end{itemize}
+\end{itemize}
