@@ -1,6 +1,22 @@
 \chapter{DBMS and Data Warehouse Systems Internals}
 
-This chapter discusses some basic mechanisms on which DBMSs and Data Warehouse Systems are built, focusing on physical plans, indexing, and query optimization.
+A DBMS is a centralized or distributed software system, which provides tools to define a database schema, add, modify, or delete data, select the data structures needed to store and retrieve data easily, and to access the data interactively using a query language or by means of a programming language. A DBMS also provides functionalities for access control, integrity control, concurrency control, and data recovery. This chapter discusses some basic mechanisms on which DBMSs and Data Warehouse Systems are built, focusing on physical plans, indexing, and query optimization.
+
+\section{Structured Query Language (SQL)}
+
+SQL is a high-level language used in DBMS for a variety of tasks. It can be used to:
+\begin{itemize}
+    \item Create, alter, and drop tables or views (\textbf{Data Definition Language});
+    \item Insert, update, and delete stored data (\textbf{Data Manipulation Language});
+    \item Query the database to retrieve data (\textbf{Data Query Language});
+    \item Create and manage access control policies (\textbf{Data Control Language}).
+\end{itemize}
+SQL was based upon relational algebra and implements its operations, extending them to operations on multisets (i.e., relations that contain duplicate tuples). This extension requires a new operator, \textbf{duplicate elimination} ($\delta$), which explicitly removes duplicates from its input operand. Modified operations include projection, which returns duplicates ($\pi^b$), sort, which returns a list instead of a set, and union, intersection, and difference ($\cup^b, \cap^b, -^b$). The cardinality of the result of the latter three operations can be calculated as follows; let $t$ be an element that appears $n$ times in a relation $R$, and $m$ times in a relation $S$, then:
+\begin{itemize}
+    \item $t$ appears $n+m$ times in $R \cup^b S$;
+    \item $t$ appears $\min(n,m)$ times in $R \cap^b S$;
+    \item $t$ appears $\max(0, n-m)$ times in $R -^b S$.
+\end{itemize} 
 
 \section{DBMS Query Processing}
 
@@ -143,3 +159,11 @@ Since it is a greedy algorithm, there is no guarantee that it will find the opti
 \BoxDef{}{
     For each lattice, let $B_{\textit{greedy}}$ be the benefit of $k$ views selected by the greedy algorithm, and $B_{\textit{opt}}$ be the benefit of the optimum choice of $k$ views. Then, $B_{\textit{greedy}}$ can never be less than $0.63 \times B_{\textit{opt}}$.
 }
+
+\paragraph{Polynomial Greedy Algorithm (PGA)} HRU has a time complexity of $O(k \cdot n^2)$, where $k$ is the number of views to materialize, and $n$ the number of nodes in the lattice. Since the number of nodes grows exponentially with the number of dimensions $d$, the complexity can be approximated as $O(k \cdot 2^{2d})$. This complexity is due to the fact that at each iteration, the algorithm considers both all remaining views ($O(2^d)$) and all descendants of each view ($O(2^d)$). PGA is a variant of HRU that reduces the number of views to be considered in both cases during each iteration, adding two phases called \textit{nomination} and \textit{selection}. 
+
+\paragraph{Pick By Size (PBS)} This algorithm is used to select views based on a memory upper bound instead of a fixed number of views to materialize. The $i^{\textit{th}}$ iteration chooses a view $v$ based on the benefit per space-unit that $v$ occupies: $B(v, M)/|v|$.
+
+\paragraph{Algorithm for Dimensional Attributes} The presence of dimensional attributes increases the number of potential groupings, and therefore the number of nodes in the lattice. However, since the dimensional attributes are functionally dependent on the key of the corresponding dimension table, some nodes are redundant: for example, if a dimension table has the key $K$ and a dimensional attribute $A$, the grouping on $(K)$ produces the same result as the grouping on $(K,A)$.
+
+The same reasoning can be applied if attributes belong to hierarchies. For example, given the hierarchy $A \rightarrow B$, grouping by $A$ produces the same result as grouping by $(A,B)$.
