@@ -172,7 +172,8 @@ The same reasoning can be applied if attributes belong to hierarchies. For examp
 
 Query plan optimization in data warehouses is mostly focused on optimizing the execution of the GROUP BY operator, and on using materialized views when appropriate. This section will illustrate a series of cases in which the logical plan can be transformed, along with the conditions under which the transformation is valid.
 
-\paragraph{Functional Dependencies} Before showing actual rewrite options, this paragraph will introduce some definitions and properties of functional dependencies relevant to query optimization.
+\subsection{Functional Dependencies}
+Before showing actual rewrite options, this paragraph will introduce some definitions and properties of functional dependencies relevant to query optimization.
 \BoxDef{Functional Dependency}{
     Given a relation schema $R$ and $X,Y$ subsets of attributes of $R$, a functional dependency $X \rightarrow Y$ is a constraint that specifies that for every possible instance $r$ of $R$ and for any two tuples $t_1, t_2 \in r$, $t_1[X] = t_2[X]$ implies $t_1[Y] = t_2[Y]$.
 }
@@ -246,6 +247,7 @@ We can also build an algorithm that computes the closure of an attribute set ove
     \end{enumerate}
 \end{enumerate}
 
+\subsection{Group By and Join}
 
 \paragraph{Functional Dependencies and Groupings} Let $A$ and $B$ be two attributes of a relation $R$, such that $A \rightarrow B$. This functional dependency implies that grouping over $(A,B)$ produces the same groups as grouping over $(A)$:
 \begin{align*}
@@ -312,3 +314,76 @@ This transformation can be applied if:
         \item $\textit{GBcount} AS Ide_j \in Z$ if $f(A_i) \in G$ is $\textit{COUNT}(A_i) AS Ide_j$.
     \end{itemize}
 \end{itemize}
+
+\subsection{Query Rewriting with Materialized Views}
+
+A materialized view is a query whose result is stored in a table. The existence of materialized views gives life to the query rewriting problem: given a query $Q$ and a materialized view $V$, is it possible to rewrite the query plan of $Q$ using $V$? The query will not be rewritten if the plan without the view has a lower estimated computational cost thatn the one using it, or there is another plan with a different materialized view that has a lower cost. Typically, the individual writing a query using SQL (or any other high-level language) is not aware of views and does not explicitly use them, but the query optimizer will consider the possibility of rewriting to use one of the available materialized views.
+
+In this section, we make some assumptions on the star schema. Foreign and primary keys are the only attributes of the star schema with the same names and data types, meaning that a natural join is possible between the fact table and the dimension tables. Fact tables and dimension tables do not contain null values in any attribute. Queries are only star queries, and joins are lossless and non-duplicating (a row in the fact table matches with one (lossless) and only one (non-duplicating) row in a joined dimension table), and cannot be eliminated by query rewriting. We will now see two approaches for query rewriting.
+
+\paragraph{First approach} This approach modifies the view plan to match the query plan by adding new operators. The algorithm used for this approach compares the logical plans of $Q$ and $V$, pair-wise and bottom-up, checking if they are equivalent; if not, a compensation is added to the view, i.e., a set of new operators needed to align its result to the query plan. The definitions of matching and compensation between logical trees $A_Q$ and $A_V$ follow. 
+\BoxDef{Operators Match}{
+    A logical operator $\varepsilon_Q$ \textbf{matches} a logical operator $\mu_V$ if the records of $A_Q(\varepsilon_Q)$ and $A_V(\mu_V)$ are the same.
+}
+\BoxDef{Operators Compensation}{
+    A logical operator $\varepsilon_Q$ partially matches a logical operator $\mu_V$ if the records $A_Q(\varepsilon_Q)$ and $A_V(\mu_V)$ are different, but it is possible to append to the root of $A_V(\mu_V)$ a logical tree $\alpha(\mu_V)$ called \textbf{compensation}, such that the result of $\alpha(\mu_V)$ is the same as $A_Q(\varepsilon_Q)$.
+}
+A query matches a view if there is a compensation between the roots of their logical trees.
+
+When the operand of a view operator $\mu_V$ has a compensation, it must be possible to float such compensation to $\mu_V$.
+\BoxDef{Compensation Float}{
+    The \textbf{float} of a compensation $\alpha$ on $\mu_V$ requires the execution of the operations in $\alpha$ necessary to compute the result of $\varepsilon_Q$ using that of $\mu_V$.
+}
+The final compensation floated over the root of the plan is the rewriting of the query using the view. The algorithm works as follows:
+\begin{enumerate}[noitemsep]
+    \item The input are the two query logical tree
+    \begin{equation*}
+        A_Q = \gamma_{G_Q}(\sigma_{C_Q}(\bowtie R_Q))
+    \end{equation*}
+    and the view logical tree
+    \begin{equation*}
+        A_V = \gamma_{G_V}(\sigma_{C_V}(\bowtie R_V))
+    \end{equation*}
+    The comparison between operators is in the order: join, selection, grouping.
+    \item ($\bowtie$) If the joins in the query and the view do not match, a compensation is added to the view operator as follows: let $W = R_Q - R_V$ be the tables appearing in $Q$ but not in $V$; then the compensation is the join
+    \begin{equation*}
+        \alpha_{\bowtie} = (\bowtie W (A_V(\bowtie)))
+    \end{equation*}
+    The compensation is a join of $(\bowtie R_V)$. The compensation can float on $\sigma_{C_V}$ and $\gamma_{G_V}$ if $G_V$ contains the foreign keys for the tables $W$. If this condition is not satisfied, $Q$ is not rewritable using $V$.
+    \item ($\sigma$) If there is a compensation $\alpha_{\bowtie}$ on the operand, it floats over the operator $\sigma_{C_V}$. Let $A_V(\sigma_{C_V})$ be the root of the compensation tree on $\sigma_{C_V}$. If the selections do not match, and $C_Q = C_V \land C$, with $C$ a condition on the result of $A_V(\sigma_{C_V})$, then the following compensation is added
+    \begin{equation*}
+        \alpha_{\sigma} = \sigma_C(A_V(\sigma_{C_V}))
+    \end{equation*}
+    The compensation can float on $\gamma_{G_V}$ if it only uses attributes in $G_V$, or attributes of relations with foreign keys in $G_V$. If this condition is not satisfied, $Q$ is not rewritable using $V$.
+    \item ($\gamma$) If the operand has a compensation, it floats on the operator. To calculate the final compensation, we need to distinguish two cases, with and without grouping. Here we assume the aggregate function is SUM over a measure $S$.
+    \begin{itemize}
+        \item \textbf{Without grouping}: the rewriting is without grouping when the groupings in $Q$ and $V$ partition data into the same groups, i.e., $G_Q \rightarrow G_V \land G_V \rightarrow G_Q$ hold in $Q$. The compensation to add is
+        \begin{equation*}
+            \alpha_{\gamma} = \pi^b_{G_Q \cup \{S\}}(A_V(\gamma_{G_V}))
+        \end{equation*}
+        The compensation simply projects the attributes required by the query by appending $\pi^b$ to the root of the compensation tree.
+        \item \textbf{With grouping}: the rewriting is with grouping when the groupings in $V$ partition data into more groups than those in $Q$, i.e., $G_V \rightarrow G_Q$ holds in $Q$. The compensation to add is
+        \begin{equation*}
+            \alpha_{\gamma} = _{G_Q}\gamma_{SUM(S') AS S} (A_V(\gamma_{G_V}) \bowtie R)
+        \end{equation*}
+        where $SUM(A) AS S'$ is in $G_V$; additionally, the $G_Q$ attributes missing in the view compensation root must be retrievable from a lossless and non-duplicating join of the root with $R$, relation whose foreign key is contained in $G_V$.
+    \end{itemize}
+    \item The compensation $\alpha_{\gamma}(A_V)$ is the rewriting of $Q$ using $V$.
+\end{enumerate}
+
+\paragraph{Second approach} This approach modifies the query plan to match the view plan using algebraic equivalence rules, so that the lower portion of the query plan becomes equivalent (and can be replaced with) the view plan. Also here, we assume the input plans have the following form:
+\begin{align*}
+        &A_Q = \gamma_{G_Q}(\sigma_{C_Q}(\bowtie R_Q)) &A_V = \gamma_{G_V}(\sigma_{C_V}(\bowtie R_V))
+\end{align*}
+The steps of the algorithm are outlined below:
+\begin{enumerate}
+    \item If the selections do not match, check if $C_Q = C_V \land C$.
+    \item If $R_Q \neq R_V$, rewrite the joins in the query plan so that the left subtree contains only $(\bowtie R_V)$.
+    \item If $C_V \neq \emptyset$, push down the selection over the left subtree, which becomes $\sigma_{C_V}(\bowtie R_V)$.
+    \item Rewrite the grouping operator $\gamma_{G_Q}$ as $\gamma_{G_{Q\textit{top}}}$ and $\gamma_{G_{Q\textit{bot}}}$, such that
+    \begin{align*}
+        &\gamma_{G_Q} \equiv \gamma_{G_{Q\textit{top}}} &\gamma_{G_V} \equiv \gamma_{G_{Q\textit{bot}}}
+    \end{align*}
+    and $\gamma_{G_{Q\textit{bot}}}$ can be pushed on the left subtree.
+    \item Replace the subtree rooted in $\gamma_{G_{Q\textit{bot}}}$ with view $V$ to get the final rewriting.
+\end{enumerate}
