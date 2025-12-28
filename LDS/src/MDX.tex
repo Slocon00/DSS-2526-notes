@@ -1,0 +1,62 @@
+\section{MDX Functions}
+
+\paragraph{Numeric functions}
+\begin{itemize}
+    \item \texttt{Aggregate(set\_exp, [, numeric\_exp])}: applies an aggregation function to the cells returned by the set\_expression. If the numeric\_expression is not specified, the default aggregation function of the measure is used. If a numeric\_expression is specified, the aggregation is first applied to each cell, and then summed across them.
+    \item \texttt{Sum(set\_exp, [, numeric\_exp])}: returns the sum of a numeric\_expression evaluated for each cell in a set. If the numeric\_expression is not specified, the plain value of each cell is used. Analogous functions exist for other aggregations: \texttt{Avg}, \texttt{Min}, \texttt{Max}.
+    \item \texttt{Count(set\_exp, [, (excludeempty $|$ includeempty)])}: returns the number of cells in a set. It can be set to include or exclude empty cells from the result.
+    \item \texttt{DistinctCount(set\_exp)}: returns the number of distinct, nonempty tuples in a set.
+    \item \texttt{Rank(tuple exp, set\_exp, [, numeric\_exp])}: returns the rank of a tuple within a set; if a numeric\_expression is specified, the rank is determined by exaluating the expression against the tuple, otherwise the rank is the ordinal position of the tuple in the set.
+\end{itemize}
+
+\subsection{Hierarchy navigation}
+
+\begin{itemize}
+    \item \texttt{hierarchy\_exp.CurrentMember}: returns the current member in the specified hierarchy during iteration.
+    \item \texttt{hierarchy\_exp.All}: returns the ``All'' member of the specified hierarchy.
+    \item \texttt{member\_exp.Parent}: returns the parent of the current member in the hierarchy.
+    \item \texttt{Ancestor(member\_exp, (level\_exp $|$ distance))}: returns the ancestor of a member at a specified level or distance from the member.
+    \item \texttt{member\_exp.Children}: returns the set of children of the member. If the member has no children, an empty set is returned.
+    \item \texttt{Descendants(member\_exp, [, (level\_exp $|$ distance) [, desc\_flag]])}: returns the set of descendants of a hierarchy member at a specified level or distance, optionally including or excluding descendants in intermediate levels.
+    \item \texttt{member\_exp.Siblings}: returns the siblings of a specified member, including the member itself.
+    \item \texttt{Cousin(member\_exp, ancestor\_exp)}: returns the child member that shares the same relative position as the specified member under a different ancestor.
+    \item \texttt{member\_exp.Lag(idx)}: returns the member that is \textit{idx} positions before the specified member within the same level of the hierarchy.
+    \item \texttt{member\_exp.Lead(idx)}: returns the member that is \textit{idx} positions after the specified member within the same level of the hierarchy.
+    \item \texttt{LinkMember(member\_exp, hierarchy\_exp)}: returns the member in the hierarchy that is equivalent to the specified member.
+    \item \texttt{hierarchy\_exp.UnknownMember}: returns the ``Unknown'' member in a hierarchy level, if it exists.
+\end{itemize}
+
+\subsection{Set functions}
+
+\begin{itemize}
+    \item \texttt{Crossjoin(set\_exp1, set\_exp2 [, ...n])}: returns the cross product of the input sets. An alternate sintax is: \texttt{set\_exp1 * set\_exp2 * ... * set\_expn}. If the sets are composed of tuples from different hierarchies in the same dimension, the output will only contain tuples that actually exist.
+    \item \texttt{Union(set\_exp1, set\_exp2 [, ...n])[, ALL]}: returns a set that contains the union of the input sets. Optionally, duplicates can be preserved using the ALL flag. An alternate sintax is: \texttt{set\_exp1 + set\_exp2 + ... + set\_expn}.
+    \item \texttt{Intersect(set\_exp1, set\_exp2, [, ALL])}: returns the intersection of two input sets, optionally preserving duplicates.
+    \item \texttt{Filter(set\_exp, logical\_exp)}: returns the tuples in the input set that satisfy a search condition.
+    \item \texttt{Exists(set\_exp1, set\_exp2)}: returns the set of tuples of the first set that exist in the second.
+    \item \texttt{Except(set\_exp1, set\_exp2, [, ALL])}: removes the tuples in the first set that also exist in the second, optionally retaining duplicates.
+    \item \texttt{hierarchy\_exp.members} or \texttt{level\_exp.members}: returns the set of members in a dimension, level, or hierarchy.
+    \item \texttt{Distinct(set\_exp)}: removes duplicates from the input set and returns the resulting set.
+    \item \texttt{NONEMPTY(set\_exp1 [, set\_exp2])}: returns the set of tuples that are not empty in a specified set, optionally based on the cross product with a second set.
+    \item \texttt{Order(set\_exp, numeric\_exp [, {ASC | DESC | BASC | BDESC}])}: orders the tuples of the input set based on the evaluation of a numeric expression over each tuple. THE B in \texttt{BASC} and \texttt{BDESC} stands for ``break hierarchy'', meaning that ordering does not consider the hierarchy structure of the members.
+    \item \texttt{Head(set\_exp, [, count])}: returns the first specified number (\texttt{count}) of tuples in the specified set, retaining duplicates.
+    \item \texttt{Tail(set\_exp, [, count])}: returns the last specified number (\texttt{count}) of tuples in the specified set, retaining duplicates.
+    \item \texttt{TopCount(set\_exp, count [, numeric\_exp])}: sorts a set in descending order and returns the top \texttt{count} elements with the highest values. If a numeric expression is specified, ordering is based on the evaluation of the expression over each tuple. If no expression is specified, the members are considered in their natural order, without any sorting.
+    \item \textbf{TopSum(set\_exp, value, numeric\_exp)}: sorts a set and returns the topmost elements whose cumulative total is at least \texttt{value}. Ordering is based on the evaluation of the numeric expression over each tuple. The function then takes the smallest subset of the ordered set whose comulative total is at least \texttt{value}.
+    \item \texttt{Generate(set\_exp1, set\_exp2, [, ALL])}: applies the tuples in the second set to each member in the first set, then joins the resulting sets by union. If the ALL flag is specified, duplicates are preserved. This function is often used to evaluate complex set expression over a set of members (e.g., the top 10 customers by sales for each country).
+\end{itemize}
+
+\subsection{Time navigation}
+
+\begin{itemize}
+    \item \texttt{ParallelPeriod([level\_exp, [, index, [, member\_exp]]])}: returns a member from a prior period in the same relative position as the specified member. It is similar to Cousin, but is specifically designed for time series: ParallelPeriod finds the ancestor of the specified member at the given level, then finds the ancestor's sibling with the specified lag (index), and returns the parallel period of the member along the descendants of the sibling. If no level or member expression are specified, the default member is the current member of the first hierarchy on the first dimension with a type of Time in the measure group.
+    \item \texttt{PeriodsToDate([level\_exp,] member\_exp)}: returns the set of siblings with the same level as a given member, starting from the first and ending at the given member, constrained by the given level. If only the level is specified, the member is automatically assumed to be the current member in the iteration. If neither level nor member are specified, the level is the parent level of the current member of the first hierarchy on the first dimension with a type of Time in the measure group.
+\end{itemize}
+
+\paragraph{Other}
+
+\begin{itemize}
+    \item \texttt{IIf(logical\_exp, exp1, exp2)}: evaluates a logical expression; if it is true, returns the result of exp1, otherwise returns the result of exp2.
+    \item \texttt{IsEmpty(value\_exp)}: returns whether the evaluated expression is the empty cell.
+    \item \texttt{format\_string}: a cell property used to control the display format of numeric values in the result set. It allows to both use predefined formats (e.g., "Currency", "Percent") and custom formats.
+\end{itemize}
