@@ -38,7 +38,7 @@ A cube can be extended with borders made of cells containing th value of aggrega
 \end{figure}
 Whenever a dimension is used as coordinate instead of one of its values, the result is a \textbf{cuboid}. For example, \texttt{(Store, Product, *)} is the cuboid obtained by rolling-up by \textit{Date}. To speed up data analysis, data cube systems can pre-compute all or some cuboids and store them as \textbf{materialized views}. The total number of possible cuboids for a cube with $n$ dimensions is $2^n$; the total number of cells is
 \begin{equation*}
-    \sum_{i=1}^n (d_i + 1)
+    \prod_{i=1}^n (d_i + 1)
 \end{equation*}
 where $d_i$ is the number of values for the $i$-th dimension. An alternative way to indicare a cuboid is to omit the asterisk altogether: \texttt{(Sales, Product, *)} is equivalent to \texttt{(Sales, Product)}. \texttt{(Store, Product, Date)} denotes the whole data cube, while \texttt{()} denotes the (dimensionless) total sum of all sales.
 

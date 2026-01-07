@@ -37,7 +37,7 @@ In some cases, an interesting aspect to model is a hierarchical relationship bet
 
 Hierarchies may be \textbf{recursive}, when it involves the same dimension. For example, an \textit{employee} may have an assigned role that puts them in charge of other employees, as well as being managed by someone else; this relationship can be expressed via the \textit{supervisor} attribute, which allows the creation of a hierarchy of employees in a manager-subordinate relationship. Recursivity is represented by a crossed arrow that loops back in the same dimension. Hierarchies can also be \textbf{ragged}, if one or more elements in the chain are optional. For example, an hierarchy can be built with the attributes \textit{City}, \textit{State}, and \textit{Country}. Since some cities may belong to countries without states, \textit{State} can be set as optional. Graphically, the optional attributes in a ragged hierarchy are crossed by a line. Attributes and hierarchies can be \textbf{shared} among multiple dimensions. These attributes are represented by a double circle, and their incoming arc are always directed (regardless of whether they belong to a hierarchy or not).
 
-A dimension may also be \textbf{multivalued}, if the same fact involves multiple instances of the same dimension. For example, a product order is managed by two agents, or a medical treatment involves multiple doctors. Multivalued dimensions are represented by a double arrow head exiting from the fact table. A dimension without attributes is called \textbf{degenerate}. They are simply represented by a line exiting the fact table and a singular circle at the end without any additional attributes. If a dimension is \textbf{optional}, it is represented by a dashed line.
+A dimension may also be \textbf{multivalued}, if the same fact involves multiple instances of the same dimension. For example, a product order is managed by two agents, or a medical treatment involves multiple doctors. Multivalued dimensions are represented by a double arrow head exiting from the fact table. A dimension without attributes is called \textbf{degenerate}. They are simply represented by a line exiting the fact table and a singular circle at the end without any additional attributes. If a dimension or attribute is \textbf{optional}, it is connected by a crossed line.
 
 Although not explicitly modeled at this level, the concept of changing over time is typically reported in the documentation, to be considered in the next phases. \textbf{Changing dimensions} are those dimensions whose attribute values may change over time. For example, a customer's address, phone number, or marital status; a student's enrollment status or major; a product's price or discount. There are four types of changing dimensions, the first three of which are \textbf{slowly changing dimensions}, and the last one being the \textbf{fast changing dimension}.
 \begin{itemize}
@@ -49,7 +49,7 @@ Although not explicitly modeled at this level, the concept of changing over time
 
 \begin{figure}[H]
     \centering
-    \includesvg[width=0.5\textwidth]{img/dimensions.svg}
+    \includesvg[width=0.65\textwidth]{img/dimensions.svg}
     \caption{Graphical representation of dimensions.}
 \end{figure}
 The key steps to design a DFM schema are the following:
